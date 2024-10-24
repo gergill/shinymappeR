@@ -21,6 +21,7 @@ ui <- fluidPage(
     # Sidebar with a slider input for number of bins
     sidebarLayout(
         sidebarPanel(
+            selectInput("method", "clustering method", choices = c("single", "complete", "average", "ward.D2", "mcquitty")),
             sliderInput("bins",
                         "Number of bins:",
                         min = 1,
@@ -51,6 +52,7 @@ server <- function(input, output) {
     })
     output$distPlot <- renderPlot({
         plot(mapper_object_to_igraph(create_1D_mapper_object(data, dists, data$x, create_width_balanced_cover(min(data$x), max(data$x), input$bins, input$percent_overlap))))
+        plot(mapper_object_to_igraph(create_1D_mapper_object(data, dists, data$x, create_width_balanced_cover(min(data$x), max(data$x), input$bins, input$percent_overlap), input$method)))
     })
 }
 
