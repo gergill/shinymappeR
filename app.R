@@ -48,10 +48,16 @@ server <- function(input, output) {
     dists = dist(data)
 
     output$circle <- renderPlot({
-        plot(data, pch=20, asp=1)
+        colorRampAlpha <- function(..., n, alpha) {
+            colors <- colorRampPalette(...)(n)
+            paste(colors, sprintf("%x", ceiling(255*alpha)), sep="")
+        }
+        colfunc = colorRampAlpha(c("blue", "gold", "red"), alpha = .5, n = input$bins)
+        cover = create_width_balanced_cover(min(data$x), max(data$x), input$bins, input$percent_overlap)
+        plot(data, pch=20)
+        rect(cover[,1], -10, cover[,2], 10, col = colfunc)
     })
     output$distPlot <- renderPlot({
-        plot(mapper_object_to_igraph(create_1D_mapper_object(data, dists, data$x, create_width_balanced_cover(min(data$x), max(data$x), input$bins, input$percent_overlap))))
         plot(mapper_object_to_igraph(create_1D_mapper_object(data, dists, data$x, create_width_balanced_cover(min(data$x), max(data$x), input$bins, input$percent_overlap), input$method)))
     })
 }
