@@ -9,7 +9,7 @@
 
 library(shiny)
 library(devtools)
-install_github("https://github.com/Uiowa-Applied-Topology/mappeR/tree/dev")
+install.packages("mappeR")
 library(mappeR)
 
 # Define UI for application that draws a histogram
