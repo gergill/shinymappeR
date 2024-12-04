@@ -10,7 +10,7 @@ Ensure you have the following R packages:
 - shiny: To build the web application interface
 - mappeR: for mapper of course!
 
-you can install these packages using the following commands in the R terminal:
+you can install these packages using the following commands in the R Console:
 ```R
 install.packages("shiny")
 install.packages("mappeR")
