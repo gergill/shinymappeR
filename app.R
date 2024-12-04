@@ -9,6 +9,7 @@
 library(shiny)
 library(devtools)
 library(mappeR)
+library(stats)
 
 # stolen from sir jacob miller
 generate_spiral <- function(n=1000, noise=0.1){
@@ -62,7 +63,7 @@ ui <- fluidPage(
             selectInput(
                 "lens",
                 "Lens Function: ",
-                choices = c("project to x", "project to y", "use eccentricity value")
+                choices = c("project to x", "project to y", "use eccentricity value", "PCA-1")
             ),
             sliderInput(
                 "bins",
@@ -113,7 +114,14 @@ server <- function(input, output) {
       # grab current data
       data = data()
 
-      switch(input$lens, "project to x" = data$x, "project to y" = data$y, "use eccentricity value" = eccentricity_filter(data))
+      switch(input$lens,
+             "project to x" = data$x,
+             "project to y" = data$y,
+             "use eccentricity value" = eccentricity_filter(data), 
+             "PCA-1" = {
+                pca_output <- prcomp(data, center = FALSE, scale. = FALSE)
+                pca_output$x[,1]
+             })
     })
 
     # generate cover
@@ -176,8 +184,37 @@ server <- function(input, output) {
         # plot the bins on top of the data
         switch(input$lens,
                "project to x" = rect(cover[, 1], min(data$y), cover[, 2], max(data$y), col = bincolors),
-               "project to y" = rect(min(data$x), cover[, 2], max(data$x), cover[, 1], col = bincolors))
-
+               
+               "project to y" = rect(min(data$x), cover[, 2], max(data$x), cover[, 1], col = bincolors),
+               
+               "PCA-1" = {
+                  # draw PCA line
+                  pca_output <- prcomp(data, center = FALSE, scale. = FALSE)
+                  pca_vector <- pca_output$rotation[,1]
+                  slope <- pca_vector[2] / pca_vector[1] 
+                  abline(0, slope, col = "green", lwd = 3, lty = 3)
+                  
+                  # calculate perpendicular vector
+                  perp_vector <- c(-pca_vector[2], pca_vector[1])
+                  perp_vector <- perp_vector / sqrt(sum(perp_vector^2)) # normalize
+                  
+                  # color (super annoying) bins using a loop since polygon
+                  for (i in 1:nrow(cover)) {
+                          # calculate cut points for bins on the pca line
+                          cut1 <- cover[i, 1] * pca_vector
+                          cut2 <- cover[i, 2] * pca_vector
+                          # the 100 is just to make sure the bins don't get cutoff in the image
+                          corner1 <- cut1 + 100 * perp_vector
+                          corner2 <- cut1 - 100 * perp_vector
+                          corner3 <- cut2 - 100 * perp_vector
+                          corner4 <- cut2 + 100 * perp_vector
+                          
+                          # Draw filled rectangle using polygon since rect didn't work :((
+                          polygon(x = c(corner1[1], corner2[1], corner3[1], corner4[1]),
+                                  y = c(corner1[2], corner2[2], corner3[2], corner4[2]),
+                                  col = bincolors[i])
+                  }
+                })
     })
 
     # output mapper graph
