@@ -9,11 +9,13 @@ To run the application you will need R and the Shiny package installed. You can 
 Ensure you have the following R packages:
 - shiny: To build the web application interface
 - mappeR: for mapper of course!
+- devtools: to build the project
 
-you can install these packages using the following commands in the R terminal:
+you can install these packages using the following commands in the R Console:
 ```R
 install.packages("shiny")
 install.packages("mappeR")
+install.packages("devtools")
 ```
 ### How to Run:
 Open the app.R file in RStudio, click Run App at the top.
@@ -35,8 +37,6 @@ Open the app.R file in RStudio, click Run App at the top.
   - input data plot
     - shows the selected dataset with color coded bins
   - Mapper graph plot (also color coded)
-
-Here is something.
 
 
 ### How to Contribute:
