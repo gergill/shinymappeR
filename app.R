@@ -112,7 +112,7 @@ server <- function(input, output) {
 
     # generate cover
     cover = reactive({
-        projection = switch(input$projection, "x" = data$x, "y" = data$y)
+        projection = switch(input$projection, "x" = data()$x, "y" = data()$y)
         create_width_balanced_cover(min(projection),
                                     max(projection),
                                     input$bins,
