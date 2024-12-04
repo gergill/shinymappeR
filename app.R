@@ -118,6 +118,7 @@ server <- function(input, output) {
 
     # generate cover
     cover = reactive({
+
         # grab current data
         data = data()
 
