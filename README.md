@@ -36,8 +36,6 @@ Open the app.R file in RStudio, click Run App at the top.
     - shows the selected dataset with color coded bins
   - Mapper graph plot (also color coded)
 
-Here is something.
-
 
 ### How to Contribute:
 
