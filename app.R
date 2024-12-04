@@ -1,4 +1,3 @@
-#
 # This is a Shiny web application. You can run the application by clicking
 # the 'Run App' button above.
 #
@@ -61,9 +60,9 @@ ui <- fluidPage(
                 step = 100 # step size for slider bar
             ),
             selectInput(
-                "projection",
-                "Projection coordinate",
-                choices = c("x", "y")
+                "lens",
+                "Lens Function: ",
+                choices = c("project to x", "project to y", "use eccentricity value")
             ),
             sliderInput(
                 "bins",
@@ -83,8 +82,7 @@ ui <- fluidPage(
                 "method",
                 "Clustering method",
                 choices = c("single", "complete", "average", "ward.D2", "mcquitty")
-            ),
-            selectInput("global", "Global or local clustering?", choices = c("global", "local"))
+            )
         ),
 
         # plot mapper graph
@@ -110,51 +108,79 @@ server <- function(input, output) {
         )
     })
 
+    # filter data
+    filtered_data = reactive({
+      # grab current data
+      data = data()
+
+      switch(input$lens, "project to x" = data$x, "project to y" = data$y, "use eccentricity value" = eccentricity_filter(data))
+    })
+
     # generate cover
     cover = reactive({
-        projection = switch(input$projection, "x" = data$x, "y" = data$y)
-        create_width_balanced_cover(min(projection),
-                                    max(projection),
+        # grab current data
+        data = data()
+
+        # grab current filter values
+        filtered_data = filtered_data()
+
+        # create 1D width-balanced cover
+        create_width_balanced_cover(min(filtered_data),
+                                    max(filtered_data),
                                     input$bins,
                                     input$percent_overlap)
     })
 
     # generate mapper graph
     mapper = reactive({
+        # grab current data
         data = data()
-        cover = cover()
-        projection = switch(input$projection, "x" = data$x, "y" = data$y)
-        global = switch(input$global, "global" = TRUE, "local" = FALSE)
 
+        # grab current filter values
+        filtered_data = filtered_data()
+
+        # grab current cover
+        cover = cover()
+
+        # create mapper graph
         create_1D_mapper_object(
             data,
             dist(data),
-            projection,
+            filtered_data,
             cover,
-            input$method,
-            global
+            input$method
         )
     })
 
+    # output data plot
     output$inputdata <- renderPlot({
         data = data()
-        projection = switch(input$projection, "x" = data$x, "y" = data$y)
+        filtered_data = filtered_data()
         cover = cover()
 
+        # plot data
+        plot(data, pch = 20)
+
+        # define a function that creates a color gradient
         colorRampAlpha <- function(..., n, alpha) {
             colors <- colorRampPalette(...)(n)
             paste(colors, sprintf("%x", ceiling(255 * alpha)), sep = "")
         }
-        colfunc = colorRampAlpha(c("blue", "gold", "red"),
+
+        # create a color gradient from blue to gold to red with (number of bins) colors
+        bincolors = colorRampAlpha(c("blue", "gold", "red"),
                                  alpha = .5,
                                  n = input$bins)
-        plot(data, pch = 20)
-        switch(input$projection,
-               "x" = rect(cover[, 1], min(data$y), cover[, 2], max(data$y), col = colfunc),
-               "y" = rect(min(data$x), cover[, 2], max(data$x), cover[, 1], col = colfunc))
+
+        # plot the bins on top of the data
+        switch(input$lens,
+               "project to x" = rect(cover[, 1], min(data$y), cover[, 2], max(data$y), col = bincolors),
+               "project to y" = rect(min(data$x), cover[, 2], max(data$x), cover[, 1], col = bincolors))
 
     })
-    output$distPlot <- renderPlot({
+
+    # output mapper graph
+    output$mapper <- renderPlot({
         plot(mapper_object_to_igraph(mapper()))
     })
 }
