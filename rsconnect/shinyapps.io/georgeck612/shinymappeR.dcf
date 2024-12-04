@@ -1,0 +1,12 @@
+name: shinymappeR
+title: shinymappeR
+username: georgeck612
+account: georgeck612
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 13149451
+bundleId: 9278908
+url: https://georgeck612.shinyapps.io/shinymappeR/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE
