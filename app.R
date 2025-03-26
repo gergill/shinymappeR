@@ -10,6 +10,7 @@ library(shiny)
 library(devtools)
 library(mappeR)
 library(stats)
+library(mclust) #install this
 
 # stolen from sir jacob miller
 generate_spiral <- function(n=1000, noise=0.1){
@@ -61,6 +62,11 @@ ui <- fluidPage(
                 step = 100 # step size for slider bar
             ),
             selectInput(
+                "cover_type",
+                "Covering Scheme:",
+                choices = c("Width-Balanced", "GMM-based", "G-Mapper")
+            ),
+            selectInput(
                 "lens",
                 "Lens Function: ",
                 choices = c("project to x", "project to y", "use eccentricity value", "PCA-1")
@@ -79,6 +85,13 @@ ui <- fluidPage(
                 max = 100,
                 value = 25
             ),
+            sliderInput("prob_threshold",
+            "Probability Threshold:",
+            min=0.001,
+            max=.5,
+            value=0.05,
+            step=0.001),
+
             selectInput(
                 "method",
                 "Clustering method",
@@ -91,7 +104,7 @@ ui <- fluidPage(
     ))
 
 # Define server logic required to construct mapper graph
-server <- function(input, output) {
+server <- function(input, output, session) {
     # generate sample data
     data = reactive({
         switch(
@@ -117,15 +130,54 @@ server <- function(input, output) {
       switch(input$lens,
              "project to x" = data$x,
              "project to y" = data$y,
-             "use eccentricity value" = eccentricity_filter(data), 
+             "use eccentricity value" = eccentricity_filter(data),
              "PCA-1" = {
                 pca_output <- prcomp(data, center = FALSE, scale. = FALSE)
                 pca_output$x[,1]
              })
     })
 
+# A reactive expression for the 'G-Mapper' covering scheme
+# Should now only compute the model when needed
+    gmapper_model <- reactive({
+        if(input$cover_type == "G-Mapper") {
+            if (!require("mclust")) {
+                install.packages("mclust")
+                library(mclust)
+            }
+            # format required by mclust
+            data_matrix <- as.matrix(filtered_data())
+
+            max_components <- min(100, length(filtered_data()) / 10) # completely arbitrary
+
+            prob_threshold <- input$prob_threshold
+
+            # "V" - uses univariate model with variable variance
+            Mclust(data_matrix, G=1:max_components, modelNames="V")
+        } else {
+            NULL
+        }
+    })
+
+
+    # updates the bins slider when G-Mapper model changes
+    observe({
+        if(input$cover_type == "G-Mapper" && !is.null(gmapper_model())) {
+
+            n_components <- length(gmapper_model()$parameters$mean)
+
+            updateSliderInput(session, "bins", value = n_components)
+        }
+    })
+
+
+
     # generate cover
     cover = reactive({
+
+        if(input$cover_type == "G-Mapper") {
+            prob_threshold <- input$prob_threshold
+        }
 
         # grab current data
         data = data()
@@ -133,11 +185,133 @@ server <- function(input, output) {
         # grab current filter values
         filtered_data = filtered_data()
 
-        # create 1D width-balanced cover
-        create_width_balanced_cover(min(filtered_data),
+        # create cover based on user selection
+        switch(input$cover_type,
+                "Width-Balanced" = create_width_balanced_cover(min(filtered_data),
                                     max(filtered_data),
                                     input$bins,
-                                    input$percent_overlap)
+                                    input$percent_overlap),
+                "GMM-based" = {
+                    if (!require("mclust")) {
+                        install.packages("mclust")
+                        library(mclust)
+                    }
+                    # define the functions:
+                    fit_gmm <- function(filtered_data, n_components) {
+                        data_matrix <- as.matrix(filtered_data)
+
+                        # Fit GMM to 1D-filtered values
+                        # Force "V" model (variable variance, univariate)
+                        gmm_model <- Mclust(data_matrix, G=n_components, modelNames="V")
+                        return(gmm_model)
+                    }
+
+                    create_gmm_cover <- function(filtered_data, gmm_model, percent_overlap) {
+                        means <- gmm_model$parameters$mean
+                        variances <- gmm_model$parameters$variance$sigmasq
+                        sorted_indices <- order(means)
+                        sorted_means <- means[sorted_indices]
+                        sorted_variances <- variances[sorted_indices]
+
+                        intervals <- matrix(0, nrow=length(sorted_means), ncol=2)
+
+                        for (i in 1:length(sorted_means)) {
+                            std_dev <- sqrt(sorted_variances[i])
+
+                            intervals[i,] <- c(sorted_means[i] - 2*std_dev, sorted_means[i] + 2*std_dev)
+                        }
+
+                        for(j in 2:length(sorted_means)){
+                            midpoint <- (sorted_means[j] + sorted_means[j-1])/2
+                            overlap_distance <- percent_overlap*(sorted_means[j] - sorted_means[j-1])/100
+                            intervals[j-1, 2] <- midpoint + overlap_distance
+                            intervals[j, 1] <- midpoint - overlap_distance
+
+                        }
+
+                        intervals[1,1] <- min(filtered_data)
+                        intervals[length(sorted_means), 2] <- max(filtered_data)
+
+                        return(intervals)
+
+                    }
+                    gmm_result <- fit_gmm(filtered_data, input$bins)
+                    create_gmm_cover(filtered_data, gmm_result, input$percent_overlap)
+                },
+
+                "G-Mapper" = {
+                    # Get the pre-computed GMM model from the reactive expression
+                    model <- gmapper_model()
+
+                    # NOTE: fit_gmapper() is defined but is not used since we are using the version from gmapper_model()
+                    # I am only including it for posterity
+                    fit_gmapper <- function(filtered_data) {
+                        data_matrix <- as.matrix(filtered_data)
+
+                        # Fits GMM with automatic selection of number of components using BIC
+                        max_components <- min(100, length(filtered_data) / 10)
+                        gmapper_model <- Mclust(data_matrix, G=1:max_components, modelNames="V")
+                        return(gmapper_model)
+                    }
+
+                    # creates cover intervals based on GMM components
+                    create_gmapper_cover <- function(filtered_data, gmapper_model, percent_overlap, prob_threshold) {
+                        # get model parameters
+                        means <- gmapper_model$parameters$mean
+                        variances <- gmapper_model$parameters$variance$sigmasq
+                        weights <- gmapper_model$parameters$pro
+
+                        sorted_indices <- order(means)
+                        sorted_means <- means[sorted_indices]
+                        sorted_variances <- variances[sorted_indices]
+                        sorted_weights <- weights[sorted_indices]
+
+                        # Initialize intervals matrix
+                        intervals <- matrix(0, nrow=length(sorted_means), ncol=2)
+
+                        # Create intervals based on probability density
+                        for (i in 1:length(sorted_means)) {
+                            std_dev <- sqrt(sorted_variances[i])
+
+                            # creates intervals containing the inner (1-prob_threshold) of the mass for each gaussian
+                            q_low <- qnorm(prob_threshold/2, mean=sorted_means[i], sd=std_dev)
+                            q_high <- qnorm(1-prob_threshold/2, mean=sorted_means[i], sd=std_dev)
+
+                            intervals[i,] <- c(q_low, q_high)
+                        }
+
+                        # adjust intervals for overlap
+                        for(j in 2:length(sorted_means)) {
+
+                            midpoint <- (sorted_means[j] + sorted_means[j-1])/2
+
+                            sd_left <- sqrt(sorted_variances[j-1])
+                            sd_right <- sqrt(sorted_variances[j])
+
+                            # overlap is dependent on user specified percent overlap and is weighted by the standard deviations of adjacent components
+                            overlap_factor <- percent_overlap *
+                                            (sd_left * sorted_weights[j-1] + sd_right * sorted_weights[j]) /
+                                            (sorted_weights[j-1] + sorted_weights[j])
+
+                            # adjust interval bounds to ensure proper overlap
+                            intervals[j-1, 2] <- midpoint + overlap_factor
+                            intervals[j, 1] <- midpoint - overlap_factor
+                        }
+
+                        # make sure the cover spans
+                        intervals[1,1] <- min(filtered_data)
+                        intervals[length(sorted_means), 2] <- max(filtered_data)
+
+                        return(intervals)
+                    }
+
+                    prob_threshold <- input$prob_threshold
+
+                    n_components <- length(model$parameters$mean)
+
+                    create_gmapper_cover(filtered_data,model, input$percent_overlap/100, prob_threshold)
+                }
+        )
     })
 
     # generate mapper graph
@@ -157,7 +331,7 @@ server <- function(input, output) {
             dist(data),
             filtered_data,
             cover,
-            input$method
+            hierarchical_clusterer(input$method)
         )
     })
 
@@ -184,20 +358,20 @@ server <- function(input, output) {
         # plot the bins on top of the data
         switch(input$lens,
                "project to x" = rect(cover[, 1], min(data$y), cover[, 2], max(data$y), col = bincolors),
-               
+
                "project to y" = rect(min(data$x), cover[, 2], max(data$x), cover[, 1], col = bincolors),
-               
+
                "PCA-1" = {
                   # draw PCA line
                   pca_output <- prcomp(data, center = FALSE, scale. = FALSE)
                   pca_vector <- pca_output$rotation[,1]
-                  slope <- pca_vector[2] / pca_vector[1] 
+                  slope <- pca_vector[2] / pca_vector[1]
                   abline(0, slope, col = "green", lwd = 3, lty = 3)
-                  
+
                   # calculate perpendicular vector
                   perp_vector <- c(-pca_vector[2], pca_vector[1])
                   perp_vector <- perp_vector / sqrt(sum(perp_vector^2)) # normalize
-                  
+
                   # color (super annoying) bins using a loop since polygon
                   for (i in 1:nrow(cover)) {
                           # calculate cut points for bins on the pca line
@@ -208,7 +382,7 @@ server <- function(input, output) {
                           corner2 <- cut1 - 100 * perp_vector
                           corner3 <- cut2 - 100 * perp_vector
                           corner4 <- cut2 + 100 * perp_vector
-                          
+
                           # Draw filled rectangle using polygon since rect didn't work :((
                           polygon(x = c(corner1[1], corner2[1], corner3[1], corner4[1]),
                                   y = c(corner1[2], corner2[2], corner3[2], corner4[2]),
