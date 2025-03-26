@@ -331,7 +331,7 @@ server <- function(input, output, session) {
             dist(data),
             filtered_data,
             cover,
-            hierarchical_clusterer(input$method)
+            clusterer = hierarchical_clusterer(input$method)
         )
     })
 
