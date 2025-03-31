@@ -21,11 +21,24 @@ ui <- fluidPage(
   # Sidebar with parameter input options
   sidebarLayout(
     sidebarPanel(
-            selectInput( # this is a drop down list
-                "data", # internal variable name
-                "Dataset", # display name
-                choices = c("circle", "figure 8", "spiral", "barbell") # choices for drop down
+      selectInput(
+        "data",
+        "Dataset",
+        choices = c("circle", "figure 8", "spiral", "barbell")
       ),
+      conditionalPanel(
+        condition = "input.data == 'barbell'",
+        sliderInput(
+          "points",
+          "Number of points",
+          value = 1000,
+          min = 100,
+          max = 2000,
+          step = 100
+        )
+      ),
+      conditionalPanel(
+        condition = "input.data != 'barbell'",
         sliderInput( # this is a slider
           "points", # internal variable name
           "Number of points", # display name
@@ -34,11 +47,38 @@ ui <- fluidPage(
           max = 2000, # max value
           step = 100 # step size for slider bar
         ),
+        sliderInput(
+          "noise",
+          "Noise",
+          value = .1,
+          min = 0,
+          max = 1
+        )
+      ),
+    ),
+
+    # plot data
+    mainPanel(plotOutput("inputdata"))
+  ),
+
+  sidebarLayout(
+    sidebarPanel(
       selectInput(
         "lens",
         "Lens Function: ",
-                choices = c("project to x", "project to y", "use eccentricity value")
+        choices = c(
+          "project to x",
+          "project to y",
+          "use eccentricity value",
+          "PCA-1",
+          "PCA-2"
+        )
+      )
     ),
+    mainPanel(plotOutput("filtered_data"))
+  ),
+
+  verticalLayout(
     sliderInput(
       "bins",
       "Number of bins:",
@@ -58,11 +98,9 @@ ui <- fluidPage(
       "Clustering method",
       choices = c("single", "complete", "average", "ward.D2", "mcquitty")
     )
-        ),
+  )
 
-        # plot mapper graph
-        mainPanel(plotOutput("inputdata"), plotOutput("mapper"))
-    ))
+)
 
 # Define server logic required to construct mapper graph
 server <- function(input, output) {
@@ -82,12 +120,18 @@ server <- function(input, output) {
     # grab current data
     data = data()
 
-      switch(input$lens, "project to x" = data$x, "project to y" = data$y, "use eccentricity value" = eccentricity_filter(data))
+    switch(
+      input$lens,
+      "project to x" = data$x,
+      "project to y" = data$y,
+      "use eccentricity value" = eccentricity(data),
+      "PCA-1" = pca_filter(data, 1),
+      "PCA-2" = pca_filter(data, 2)
+    )
   })
 
   # generate cover
   cover = reactive({
-
     # grab current data
     data = data()
 
