@@ -128,22 +128,25 @@ server <- function(input, output) {
     # plot data
     plot(data, pch = 20, axes=FALSE, asp = 1)
 
-        # define a function that creates a color gradient
-        colorRampAlpha <- function(..., n, alpha) {
-            colors <- colorRampPalette(...)(n)
-            paste(colors, sprintf("%x", ceiling(255 * alpha)), sep = "")
-        }
 
-        # create a color gradient from blue to gold to red with (number of bins) colors
-        bincolors = colorRampAlpha(c("blue", "gold", "red"),
-                                 alpha = .5,
-                                 n = input$bins)
+    #
+    # # plot the bins on top of the data
+    # switch(
+    #   input$lens,
+    #   "project to x" = rect(cover[, 1], min(data$y), cover[, 2], max(data$y), col = bincolors),
+    #   "project to y" = rect(min(data$x), cover[, 2], max(data$x), cover[, 1], col = bincolors)
+    # )
 
-        # plot the bins on top of the data
-        switch(input$lens,
-               "project to x" = rect(cover[, 1], min(data$y), cover[, 2], max(data$y), col = bincolors),
-               "project to y" = rect(min(data$x), cover[, 2], max(data$x), cover[, 1], col = bincolors))
+  })
 
+  output$filtered_data <- renderPlot({
+    data = data()
+    filtered_data = filtered_data()
+
+    cols = colorRampPalette(c('blue', 'gold', 'red'))
+    col <- cols(20)[as.numeric(cut(filtered_data, breaks = 20))]
+
+    plot(data, pch = 20, axes = FALSE, col = col, asp=1)
   })
 
   # output mapper graph
