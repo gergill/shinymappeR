@@ -10,7 +10,6 @@ library(shiny)
 library(devtools)
 library(mappeR)
 source("dataset_generation.R")
-source("data_input_viz.R")
 source("lens_functions.R")
 source("cover_logic.R")
 
