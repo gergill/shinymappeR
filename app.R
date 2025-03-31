@@ -70,15 +70,9 @@ server <- function(input, output) {
   data = reactive({
     switch(
       input$data,
-            "circle" = data.frame(
-                x = sapply(1:input$points, cos) + runif(input$points, 0, .1),
-                y = sapply(1:input$points, sin) + runif(input$points, 0, .1)
-            ),
-            "figure 8" = data.frame(
-                x = sapply(1:input$points, function(x) cos(x) / (1 + sin(x)^2)) + runif(input$points, 0, .1),
-                y = sapply(1:input$points, function(x) sin(x)*cos(x) / (1 + sin(x)^2)) + runif(input$points, 0, .1)
-            ),
-            "spiral" = generate_spiral(input$points),
+      "circle" = generate_circle(input$points, input$noise),
+      "figure 8" = generate_figure_eight(input$points, input$noise),
+      "spiral" = generate_spiral(input$points, input$noise),
       "barbell" = generate_barbell(input$points)
     )
   })
@@ -129,11 +123,10 @@ server <- function(input, output) {
   # output data plot
   output$inputdata <- renderPlot({
     data = data()
-        filtered_data = filtered_data()
-        cover = cover()
+
 
     # plot data
-        plot(data, pch = 20)
+    plot(data, pch = 20, axes=FALSE, asp = 1)
 
         # define a function that creates a color gradient
         colorRampAlpha <- function(..., n, alpha) {
