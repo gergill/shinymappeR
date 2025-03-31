@@ -41,48 +41,48 @@ generate_barbell <- function(n) {
 
 # Define UI for application that constructs mapper graph
 ui <- fluidPage(
-    titlePanel("1D Mapper"),
+  titlePanel("1D Mapper"),
 
-    # Sidebar with parameter input options
-    sidebarLayout(
-        sidebarPanel(
+  # Sidebar with parameter input options
+  sidebarLayout(
+    sidebarPanel(
             selectInput( # this is a drop down list
                 "data", # internal variable name
                 "Dataset", # display name
                 choices = c("circle", "figure 8", "spiral", "barbell") # choices for drop down
-            ),
-            sliderInput( # this is a slider
-                "points", # internal variable name
-                "Number of points", # display name
-                value = 1000, # initial value
-                min = 100, # min value
-                max = 2000, # max value
-                step = 100 # step size for slider bar
-            ),
-            selectInput(
-                "lens",
-                "Lens Function: ",
+      ),
+        sliderInput( # this is a slider
+          "points", # internal variable name
+          "Number of points", # display name
+          value = 1000, # initial value
+          min = 100, # min value
+          max = 2000, # max value
+          step = 100 # step size for slider bar
+        ),
+      selectInput(
+        "lens",
+        "Lens Function: ",
                 choices = c("project to x", "project to y", "use eccentricity value")
-            ),
-            sliderInput(
-                "bins",
-                "Number of bins:",
-                min = 1,
-                max = 50,
-                value = 10
-            ),
-            sliderInput(
-                "percent_overlap",
-                "Percent overlap:",
-                min = 0,
-                max = 100,
-                value = 25
-            ),
-            selectInput(
-                "method",
-                "Clustering method",
-                choices = c("single", "complete", "average", "ward.D2", "mcquitty")
-            )
+    ),
+    sliderInput(
+      "bins",
+      "Number of bins:",
+      min = 1,
+      max = 50,
+      value = 10
+    ),
+    sliderInput(
+      "percent_overlap",
+      "Percent overlap:",
+      min = 0,
+      max = 100,
+      value = 25
+    ),
+    selectInput(
+      "method",
+      "Clustering method",
+      choices = c("single", "complete", "average", "ward.D2", "mcquitty")
+    )
         ),
 
         # plot mapper graph
@@ -91,10 +91,10 @@ ui <- fluidPage(
 
 # Define server logic required to construct mapper graph
 server <- function(input, output) {
-    # generate sample data
-    data = reactive({
-        switch(
-            input$data,
+  # generate sample data
+  data = reactive({
+    switch(
+      input$data,
             "circle" = data.frame(
                 x = sapply(1:input$points, cos) + runif(input$points, 0, .1),
                 y = sapply(1:input$points, sin) + runif(input$points, 0, .1)
@@ -104,62 +104,60 @@ server <- function(input, output) {
                 y = sapply(1:input$points, function(x) sin(x)*cos(x) / (1 + sin(x)^2)) + runif(input$points, 0, .1)
             ),
             "spiral" = generate_spiral(input$points),
-            "barbell" = generate_barbell(input$points)
-        )
-    })
+      "barbell" = generate_barbell(input$points)
+    )
+  })
 
-    # filter data
-    filtered_data = reactive({
-      # grab current data
-      data = data()
+  # filter data
+  filtered_data = reactive({
+    # grab current data
+    data = data()
 
       switch(input$lens, "project to x" = data$x, "project to y" = data$y, "use eccentricity value" = eccentricity_filter(data))
-    })
+  })
 
-    # generate cover
-    cover = reactive({
+  # generate cover
+  cover = reactive({
 
-        # grab current data
-        data = data()
+    # grab current data
+    data = data()
 
-        # grab current filter values
-        filtered_data = filtered_data()
+    # grab current filter values
+    filtered_data = filtered_data()
 
-        # create 1D width-balanced cover
-        create_width_balanced_cover(min(filtered_data),
-                                    max(filtered_data),
-                                    input$bins,
-                                    input$percent_overlap)
-    })
+    # create 1D width-balanced cover
+    create_width_balanced_cover(min(filtered_data),
+                                max(filtered_data),
+                                input$bins,
+                                input$percent_overlap)
+  })
 
-    # generate mapper graph
-    mapper = reactive({
-        # grab current data
-        data = data()
+  # generate mapper graph
+  mapper = reactive({
+    # grab current data
+    data = data()
 
-        # grab current filter values
-        filtered_data = filtered_data()
+    # grab current filter values
+    filtered_data = filtered_data()
 
-        # grab current cover
-        cover = cover()
+    # grab current cover
+    cover = cover()
 
-        # create mapper graph
-        create_1D_mapper_object(
-            data,
-            dist(data),
-            filtered_data,
-            cover,
-            clusterer = hierarchical_clusterer(input$method)
-        )
-    })
+    # create mapper graph
+    create_1D_mapper_object(data,
+                            dist(data),
+                            filtered_data,
+                            cover,
+                            clusterer = hierarchical_clusterer(input$method))
+  })
 
-    # output data plot
-    output$inputdata <- renderPlot({
-        data = data()
+  # output data plot
+  output$inputdata <- renderPlot({
+    data = data()
         filtered_data = filtered_data()
         cover = cover()
 
-        # plot data
+    # plot data
         plot(data, pch = 20)
 
         # define a function that creates a color gradient
@@ -178,12 +176,12 @@ server <- function(input, output) {
                "project to x" = rect(cover[, 1], min(data$y), cover[, 2], max(data$y), col = bincolors),
                "project to y" = rect(min(data$x), cover[, 2], max(data$x), cover[, 1], col = bincolors))
 
-    })
+  })
 
-    # output mapper graph
-    output$mapper <- renderPlot({
-        plot(mapper_object_to_igraph(mapper()))
-    })
+  # output mapper graph
+  output$mapper <- renderPlot({
+    plot(mapper_object_to_igraph(mapper()))
+  })
 }
 
 # Run the application
