@@ -12,7 +12,6 @@ library(mappeR)
 library(bslib)
 source("dataset_generation.R")
 source("lens_functions.R")
-source("cover_logic.R")
 
 color_gradient <- function(n, alpha = 0) {
   colors <- colorRampPalette(c('blue', 'gold', 'red'))(n)
@@ -26,6 +25,10 @@ color_gradient <- function(n, alpha = 0) {
 # Define UI for application that constructs mapper graph
 ui <- navbarPage(
   "1D Mapper",
+
+
+# classic flavor ----------------------------------------------------------
+
 
   tabPanel("Overview",
            sidebarLayout(
@@ -43,16 +46,24 @@ ui <- navbarPage(
                  max = 2000, # max value
                  step = 100 # step size for slider bar
                ),
+               sliderInput(
+                 inputId = "noise",
+                 label = "Noise",
+                 value = .1,
+                 min = 0,
+                 max = 1,
+                 step = 0.01
+               ),
                selectInput(
                  "lens",
                  "Lens Function: ",
-                 choices = c("project to x", "project to y", "use eccentricity value")
+                 choices = c("project to x", "project to y", "use eccentricity value", "PCA-1", "PCA-2")
                ),
                sliderInput(
-                 "bins",
-                 "Number of bins:",
+                 "num_patches",
+                 "Number of patches:",
                  min = 1,
-                 max = 50,
+                 max = 20,
                  value = 10
                ),
                sliderInput(
@@ -70,49 +81,15 @@ ui <- navbarPage(
              ),
 
              # plot mapper graph
-             mainPanel(plotOutput("inputdata"), plotOutput("mapper"))
+             mainPanel(plotOutput("staggered_data"), plotOutput("mapper"))
            )
-  ),
-
-# dataset generation tab --------------------------------------------------
-
-  tabPanel(
-    "Dataset Generation",
-    sidebarLayout(
-      sidebarPanel(
-        selectInput(
-          "data",
-          "Dataset",
-          choices = c("circle", "figure 8", "spiral", "barbell")
-        ),
-        sliderInput(
-          inputId = "points",
-          label = "Number of points",
-          value = 1000,
-          min = 100,
-          max = 2000,
-          step = 1
-        ),
-        sliderInput(
-          inputId = "noise",
-          label = "Noise",
-          value = .1,
-          min = 0,
-          max = 1,
-          step = 0.01
-        ),
-      ),
-
-      # plot data
-      mainPanel(plotOutput("inputdata"))
-    )
   ),
 
 
   # lens input panel --------------------------------------------------------
 
   tabPanel(
-    "Lens Function Selection",
+    "Lens Functions",
     sidebarLayout(sidebarPanel(
       selectInput(
         "lens",
@@ -132,25 +109,9 @@ ui <- navbarPage(
   # cover input panel -------------------------------------------------------
 
   tabPanel(
-    "Cover Parameter Selection",
+    "Level Sets",
     sidebarLayout(
       sidebarPanel(
-        sliderInput(
-          inputId = "num_patches",
-          label = "Number of Patches: ",
-          value = 10,
-          min = 1,
-          max = 20,
-          step = 1
-        ),
-        sliderInput(
-          inputId = "percent_overlap",
-          label = "Percent Overlap: ",
-          value = 15,
-          min = 0,
-          max = 100,
-          step = 1
-        ),
         sliderInput(
           inputId = "display_patch",
           label = "Patch to Display: ",
@@ -162,19 +123,14 @@ ui <- navbarPage(
       ),
       mainPanel(plotOutput("patch_view"))
     )
-  ),
-
-
-  # mapper graph panel ------------------------------------------------------
-
-  tabPanel("Output Graph", fluidRow(column(
-    width = 12, plotOutput("mapper")
-  )), )
+  )
 )
 
 
 # Define server logic required to construct mapper graph
 server <- function(input, output) {
+
+
   # data generation and mapper steps ----------------------------------------
 
   # generate sample data
@@ -200,16 +156,6 @@ server <- function(input, output) {
       "use eccentricity value" = eccentricity(data),
       "PCA-1" = pca_filter(data, 1),
       "PCA-2" = pca_filter(data, 2)
-    )
-  })
-
-  # when water change, update air
-  observeEvent(input$num_patches, {
-    updateSliderInput(
-      inputId = "display_patch",
-      value = input$display_patch,
-      min = 1,
-      max = input$num_patches
     )
   })
 
@@ -246,7 +192,7 @@ server <- function(input, output) {
                             dist(data),
                             filtered_data,
                             cover,
-                            clusterer = hierarchical_clusterer("single"))
+                            clusterer = hierarchical_clusterer(input$method))
   })
 
 
@@ -311,6 +257,7 @@ server <- function(input, output) {
       ylab = "",
       asp = 1
     )
+
     rect(
       min(datasub$x),
       min(datasub$y),
@@ -324,6 +271,22 @@ server <- function(input, output) {
   output$mapper <- renderPlot({
     # plot igraph object obtained from mappeR
     plot(mapper_object_to_igraph(mapper()))
+  })
+
+  # plot of "staggered" level sets for x/y projection
+  output$staggered_data <- renderPlot({
+    data = data()
+    filtered_data = filtered_data()
+    cover = cover()
+
+    # plot data
+    plot(data, pch = 20)
+
+    if (input$lens == "project to x") {
+      rect(cover[, 1], min(data$y), cover[, 2], max(data$y), col = color_gradient(input$num_patches, .5))
+    } else if (input$lens == "project to y") {
+      rect(min(data$x), cover[, 2], max(data$x), cover[, 1], col = color_gradient(input$num_patches, .5))
+    }
   })
 }
 
