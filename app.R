@@ -13,8 +13,11 @@ source("dataset_generation.R")
 source("lens_functions.R")
 source("cover_logic.R")
 
+color_gradient = colorRampPalette(c('blue', 'gold', 'red'))
+
 # Define UI for application that constructs mapper graph
 ui <- fluidPage(
+
   titlePanel("1D Mapper"),
 
   # Sidebar with parameter input options
@@ -23,7 +26,10 @@ ui <- fluidPage(
       selectInput(
         "data",
         "Dataset",
-        choices = c("circle", "figure 8", "spiral", "barbell")
+        choices = c("circle",
+                    "figure 8",
+                    "spiral",
+                    "barbell")
       ),
       conditionalPanel(
         condition = "input.data == 'barbell'",
@@ -36,22 +42,31 @@ ui <- fluidPage(
           step = 100
         )
       ),
+      # this panel only displays when the condition is true
       conditionalPanel(
         condition = "input.data != 'barbell'",
-        sliderInput( # this is a slider
-          "points", # internal variable name
-          "Number of points", # display name
-          value = 1000, # initial value
-          min = 100, # min value
-          max = 2000, # max value
-          step = 100 # step size for slider bar
+        # this is a slider
+        sliderInput(
+          # internal variable name
+          inputId = "points",
+          # display name
+          label = "Number of points",
+          # initial value
+          value = 1000,
+          # min value
+          min = 100,
+          # max value
+          max = 2000,
+          # step size for slider bar
+          step = 1
         ),
         sliderInput(
-          "noise",
-          "Noise",
+          inputId = "noise",
+          label = "Noise",
           value = .1,
           min = 0,
-          max = 1
+          max = 1,
+          step = 0.01
         )
       ),
     ),
@@ -75,34 +90,15 @@ ui <- fluidPage(
       )
     ),
     mainPanel(plotOutput("filtered_data"))
-  ),
-
-  verticalLayout(
-    sliderInput(
-      "bins",
-      "Number of bins:",
-      min = 1,
-      max = 50,
-      value = 10
-    ),
-    sliderInput(
-      "percent_overlap",
-      "Percent overlap:",
-      min = 0,
-      max = 100,
-      value = 25
-    ),
-    selectInput(
-      "method",
-      "Clustering method",
-      choices = c("single", "complete", "average", "ward.D2", "mcquitty")
-    )
   )
 
 )
 
 # Define server logic required to construct mapper graph
 server <- function(input, output) {
+
+# data generation and mapper steps ----------------------------------------
+
   # generate sample data
   data = reactive({
     switch(
@@ -163,37 +159,34 @@ server <- function(input, output) {
                             clusterer = hierarchical_clusterer(input$method))
   })
 
-  # output data plot
-  output$inputdata <- renderPlot({
-    data = data()
 
+# output plots ------------------------------------------------------------
+
+  # output plot of data
+  output$inputdata <- renderPlot({
+    # grab data
+    data = data()
 
     # plot data
     plot(data, pch = 20, axes=FALSE, xlab="", ylab="", asp = 1)
-
-
-    #
-    # # plot the bins on top of the data
-    # switch(
-    #   input$lens,
-    #   "project to x" = rect(cover[, 1], min(data$y), cover[, 2], max(data$y), col = bincolors),
-    #   "project to y" = rect(min(data$x), cover[, 2], max(data$x), cover[, 1], col = bincolors)
-    # )
-
   })
 
+  # output plot of filtered data
   output$filtered_data <- renderPlot({
+    # grab data and filtered data
     data = data()
     filtered_data = filtered_data()
 
-    cols = colorRampPalette(c('blue', 'gold', 'red'))
-    col <- cols(20)[as.numeric(cut(filtered_data, breaks = 20))]
+    # create a vector of colors according to lens function
+    col <- color_gradient(50)[as.numeric(cut(filtered_data, breaks = 50))]
 
+    # plot data with appropriate coloring
     plot(data, pch = 20, axes = FALSE, xlab="", ylab="", col = col, asp=1)
   })
 
-  # output mapper graph
+  # output plot of mapper graph
   output$mapper <- renderPlot({
+    # plot igraph object obtained from mappeR
     plot(mapper_object_to_igraph(mapper()))
   })
 }
