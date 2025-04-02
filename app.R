@@ -9,11 +9,12 @@
 library(shiny)
 library(devtools)
 library(mappeR)
+library(bslib)
 source("dataset_generation.R")
 source("lens_functions.R")
 source("cover_logic.R")
 
-color_gradient <- function(n, alpha=0) {
+color_gradient <- function(n, alpha = 0) {
   colors <- colorRampPalette(c('blue', 'gold', 'red'))(n)
   if (alpha == 0) {
     return(colors)
@@ -23,38 +24,28 @@ color_gradient <- function(n, alpha=0) {
 }
 
 # Define UI for application that constructs mapper graph
-ui <- fluidPage(
+ui <- navbarPage(
+  "1D Mapper",
+  tabPanel(
+    "Dataset Generation",
 
-# title panel -------------------------------------------------------------
-  titlePanel("1D Mapper"),
 
+    # dataset input panel  ----------------------------------------------------
 
-# dataset input panel  ----------------------------------------------------
-
-  # Sidebar with parameter input options
-  sidebarLayout(
-    sidebarPanel(
-      selectInput(
-        "data",
-        "Dataset",
-        choices = c("circle",
-                    "figure 8",
-                    "spiral",
-                    "barbell")
-      ),
-        # this is a slider
+    # Sidebar with parameter input options
+    sidebarLayout(
+      sidebarPanel(
+        selectInput(
+          "data",
+          "Dataset",
+          choices = c("circle", "figure 8", "spiral", "barbell")
+        ),
         sliderInput(
-          # internal variable name
           inputId = "points",
-          # display name
           label = "Number of points",
-          # initial value
           value = 1000,
-          # min value
           min = 100,
-          # max value
           max = 2000,
-          # step size for slider bar
           step = 1
         ),
         sliderInput(
@@ -65,17 +56,19 @@ ui <- fluidPage(
           max = 1,
           step = 0.01
         ),
-    ),
+      ),
 
-    # plot data
-    mainPanel(plotOutput("inputdata"))
+      # plot data
+      mainPanel(plotOutput("inputdata"))
+    )
   ),
 
 
-# lens input panel --------------------------------------------------------
+  # lens input panel --------------------------------------------------------
 
-  sidebarLayout(
-    sidebarPanel(
+  tabPanel(
+    "Lens Function Selection",
+    sidebarLayout(sidebarPanel(
       selectInput(
         "lens",
         "Lens Function: ",
@@ -87,60 +80,57 @@ ui <- fluidPage(
           "PCA-2"
         )
       )
-    ),
-    mainPanel(plotOutput("filtered_data"))
+    ), mainPanel(plotOutput("filtered_data")))
   ),
 
 
-# cover input panel -------------------------------------------------------
+  # cover input panel -------------------------------------------------------
 
-  sidebarLayout(
-    sidebarPanel(
-      sliderInput(
-        inputId = "num_patches",
-        label = "Number of Patches: ",
-        value = 10,
-        min = 1,
-        max = 20,
-        step = 1
+  tabPanel(
+    "Cover Parameter Selection",
+    sidebarLayout(
+      sidebarPanel(
+        sliderInput(
+          inputId = "num_patches",
+          label = "Number of Patches: ",
+          value = 10,
+          min = 1,
+          max = 20,
+          step = 1
+        ),
+        sliderInput(
+          inputId = "percent_overlap",
+          label = "Percent Overlap: ",
+          value = 15,
+          min = 0,
+          max = 100,
+          step = 1
+        ),
+        sliderInput(
+          inputId = "display_patch",
+          label = "Patch to Display: ",
+          value = 1,
+          min = 1,
+          max = 2,
+          step = 1
+        )
       ),
-      sliderInput(
-        inputId = "percent_overlap",
-        label = "Percent Overlap: ",
-        value = 15,
-        min = 0,
-        max = 100,
-        step = 1
-      ),
-      sliderInput(
-        inputId = "display_patch",
-        label = "Patch to Display: ",
-        value = 1,
-        min = 1,
-        max = 2,
-        step = 1
-      )
-    ),
-    mainPanel(plotOutput("patchwork_cover"))
+      mainPanel(plotOutput("patch_view"))
+    )
   ),
 
 
-# mapper graph panel ------------------------------------------------------
+  # mapper graph panel ------------------------------------------------------
 
-
-
-  fluidRow(
-    column(width = 12,
-           plotOutput("mapper")
-           )
-  ),
-
+  tabPanel("Output Graph", fluidRow(column(
+    width = 12, plotOutput("mapper")
+  )), )
 )
+
 
 # Define server logic required to construct mapper graph
 server <- function(input, output) {
-
-# data generation and mapper steps ----------------------------------------
+  # data generation and mapper steps ----------------------------------------
 
   # generate sample data
   data = reactive({
@@ -169,8 +159,13 @@ server <- function(input, output) {
   })
 
   # when water change, update air
-  observeEvent(input$num_patches,  {
-    updateSliderInput(inputId = "display_patch", value = input$display_patch, min = 1, max = input$num_patches)
+  observeEvent(input$num_patches, {
+    updateSliderInput(
+      inputId = "display_patch",
+      value = input$display_patch,
+      min = 1,
+      max = input$num_patches
+    )
   })
 
   # generate cover
@@ -182,10 +177,12 @@ server <- function(input, output) {
     filtered_data = filtered_data()
 
     # create 1D width-balanced cover
-    create_width_balanced_cover(min(filtered_data),
-                                max(filtered_data),
-                                input$num_patches,
-                                input$percent_overlap)
+    create_width_balanced_cover(
+      min(filtered_data),
+      max(filtered_data),
+      input$num_patches,
+      input$percent_overlap
+    )
   })
 
   # generate mapper graph
@@ -208,7 +205,7 @@ server <- function(input, output) {
   })
 
 
-# output plots ------------------------------------------------------------
+  # output plots ------------------------------------------------------------
 
   # output plot of data
   output$inputdata <- renderPlot({
@@ -216,7 +213,14 @@ server <- function(input, output) {
     data = data()
 
     # plot data
-    plot(data, pch = 20, axes=FALSE, xlab="", ylab="", asp = 1)
+    plot(
+      data,
+      pch = 20,
+      axes = FALSE,
+      xlab = "",
+      ylab = "",
+      asp = 1
+    )
   })
 
   # output plot of filtered data
@@ -229,10 +233,18 @@ server <- function(input, output) {
     col <- color_gradient(50)[as.numeric(cut(filtered_data, breaks = 50))]
 
     # plot data with appropriate coloring
-    plot(data, pch = 20, axes = FALSE, xlab="", ylab="", col = col, asp=1)
+    plot(
+      data,
+      pch = 20,
+      axes = FALSE,
+      xlab = "",
+      ylab = "",
+      col = col,
+      asp = 1
+    )
   })
 
-  output$patchwork_cover <- renderPlot({
+  output$patch_view <- renderPlot({
     data = data()
     filtered_data = filtered_data()
     cover = cover()
@@ -244,10 +256,23 @@ server <- function(input, output) {
     this_patch_data = this_patch[, "data"]
     this_patch_names = unlist(strsplit(this_patch_data, ","))
     rows = as.numeric(this_patch_names)
-    datasub = data[rows,]
+    datasub = data[rows, ]
 
-    plot(datasub, pch=20, axes=FALSE, xlab = "", ylab = "", asp = 1)
-    rect(min(datasub$x), min(datasub$y), max(datasub$x), max(datasub$y), col = color_gradient(input$num_patches, .5)[[input$display_patch]])
+    plot(
+      datasub,
+      pch = 20,
+      axes = FALSE,
+      xlab = "",
+      ylab = "",
+      asp = 1
+    )
+    rect(
+      min(datasub$x),
+      min(datasub$y),
+      max(datasub$x),
+      max(datasub$y),
+      col = color_gradient(input$num_patches, .5)[[input$display_patch]]
+    )
   })
 
   # output plot of mapper graph
