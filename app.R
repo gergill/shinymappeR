@@ -14,7 +14,7 @@ source("dataset_generation.R")
 source("lens_functions.R")
 
 color_gradient <- function(n, alpha = 0) {
-  colors <- colorRampPalette(c('blue', 'gold', 'red'))(n)
+  colors <- colorRampPalette(c('blue', 'gold', 'red'), space = "Lab")(n)
   if (alpha == 0) {
     return(colors)
   } else {
@@ -92,7 +92,7 @@ ui <- navbarPage(
     "Lens Functions",
     sidebarLayout(sidebarPanel(
       selectInput(
-        "lens",
+        "lens_seg",
         "Lens Function: ",
         choices = c(
           "project to x",
@@ -102,11 +102,12 @@ ui <- navbarPage(
           "PCA-2"
         )
       )
-    ), mainPanel(plotOutput("filtered_data")))
+    ),
+    mainPanel(plotOutput("filtered_data")))
   ),
 
 
-  # cover input panel -------------------------------------------------------
+  # level set input panel -------------------------------------------------------
 
   tabPanel(
     "Level Sets",
@@ -129,6 +130,31 @@ ui <- navbarPage(
 
 # Define server logic required to construct mapper graph
 server <- function(input, output) {
+
+
+  # when lens changes, update selection
+  observeEvent(input$lens, {
+    updateSelectInput(
+      inputId = "lens_seg",
+      selected = input$lens
+    )
+  })
+
+  # when lens changes, update selection
+  observeEvent(input$lens_seg, {
+    updateSelectInput(
+      inputId = "lens",
+      selected = input$lens_seg
+    )
+  })
+
+  # when patch total changes, update selection
+  observeEvent(input$num_patches, {
+    updateSliderInput(
+      inputId = "display_patch",
+      max = input$num_patches
+    )
+  })
 
 
   # data generation and mapper steps ----------------------------------------
