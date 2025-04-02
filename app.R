@@ -169,7 +169,7 @@ server <- function(input, output) {
 
 
     # plot data
-    plot(data, pch = 20, axes=FALSE, asp = 1)
+    plot(data, pch = 20, axes=FALSE, xlab="", ylab="", asp = 1)
 
 
     #
@@ -189,7 +189,7 @@ server <- function(input, output) {
     cols = colorRampPalette(c('blue', 'gold', 'red'))
     col <- cols(20)[as.numeric(cut(filtered_data, breaks = 20))]
 
-    plot(data, pch = 20, axes = FALSE, col = col, asp=1)
+    plot(data, pch = 20, axes = FALSE, xlab="", ylab="", col = col, asp=1)
   })
 
   # output mapper graph
