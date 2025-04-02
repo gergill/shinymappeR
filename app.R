@@ -42,20 +42,6 @@ ui <- fluidPage(
                     "spiral",
                     "barbell")
       ),
-      conditionalPanel(
-        condition = "input.data == 'barbell'",
-        sliderInput(
-          "points",
-          "Number of points",
-          value = 1000,
-          min = 100,
-          max = 2000,
-          step = 100
-        )
-      ),
-      # this panel only displays when the condition is true
-      conditionalPanel(
-        condition = "input.data != 'barbell'",
         # this is a slider
         sliderInput(
           # internal variable name
@@ -78,8 +64,7 @@ ui <- fluidPage(
           min = 0,
           max = 1,
           step = 0.01
-        )
-      ),
+        ),
     ),
 
     # plot data
@@ -164,7 +149,7 @@ server <- function(input, output) {
       "circle" = generate_circle(input$points, input$noise),
       "figure 8" = generate_figure_eight(input$points, input$noise),
       "spiral" = generate_spiral(input$points, input$noise),
-      "barbell" = generate_barbell(input$points)
+      "barbell" = generate_barbell(input$points, input$noise)
     )
   })
 
