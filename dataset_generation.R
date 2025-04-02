@@ -29,11 +29,11 @@ generate_spiral <- function(n=1000, noise=0.1){
 }
 
 generate_barbell <- function(n, noise) {
-  r1 = sqrt(runif(n*.45, 0, 1))
+  r1 = sqrt(runif(n*.45, 0, .5))
   a1 = runif(n*.45, 0, 2*pi)
   disk1 = data.frame(x=r1*cos(a1) - 1, y=r1*sin(a1))
 
-  r2 = sqrt(runif(n*.45, 1-noise, 1))
+  r2 = sqrt(runif(n*.45, .5-noise, .5))
   a2 = runif(n*.45, 0, 2*pi)
   disk2 = data.frame(x=r2*cos(a2) + 1, y=r2*sin(a2))
 
