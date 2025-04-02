@@ -137,7 +137,18 @@ ui <- fluidPage(
       )
     ),
     mainPanel(plotOutput("patchwork_cover"))
-  )
+  ),
+
+
+# mapper graph panel ------------------------------------------------------
+
+
+
+  fluidRow(
+    column(width = 12,
+           plotOutput("mapper")
+           )
+  ),
 
 )
 
@@ -249,6 +260,7 @@ server <- function(input, output) {
     this_patch_names = unlist(strsplit(this_patch_data, ","))
     rows = as.numeric(this_patch_names)
     datasub = data[rows,]
+
     plot(datasub, pch=20, axes=FALSE, xlab = "", ylab = "", asp = 1)
     rect(min(datasub$x), min(datasub$y), max(datasub$x), max(datasub$y), col = color_gradient(input$num_patches, .5)[[input$display_patch]])
   })
