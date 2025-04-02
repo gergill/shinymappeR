@@ -26,13 +26,58 @@ color_gradient <- function(n, alpha = 0) {
 # Define UI for application that constructs mapper graph
 ui <- navbarPage(
   "1D Mapper",
+
+  tabPanel("Overview",
+           sidebarLayout(
+             sidebarPanel(
+               selectInput( # this is a drop down list
+                 "data", # internal variable name
+                 "Dataset", # display name
+                 choices = c("circle", "figure 8", "spiral", "barbell") # choices for drop down
+               ),
+               sliderInput( # this is a slider
+                 "points", # internal variable name
+                 "Number of points", # display name
+                 value = 1000, # initial value
+                 min = 100, # min value
+                 max = 2000, # max value
+                 step = 100 # step size for slider bar
+               ),
+               selectInput(
+                 "lens",
+                 "Lens Function: ",
+                 choices = c("project to x", "project to y", "use eccentricity value")
+               ),
+               sliderInput(
+                 "bins",
+                 "Number of bins:",
+                 min = 1,
+                 max = 50,
+                 value = 10
+               ),
+               sliderInput(
+                 "percent_overlap",
+                 "Percent overlap:",
+                 min = 0,
+                 max = 100,
+                 value = 25
+               ),
+               selectInput(
+                 "method",
+                 "Clustering method",
+                 choices = c("single", "complete", "average", "ward.D2", "mcquitty")
+               )
+             ),
+
+             # plot mapper graph
+             mainPanel(plotOutput("inputdata"), plotOutput("mapper"))
+           )
+  ),
+
+# dataset generation tab --------------------------------------------------
+
   tabPanel(
     "Dataset Generation",
-
-
-    # dataset input panel  ----------------------------------------------------
-
-    # Sidebar with parameter input options
     sidebarLayout(
       sidebarPanel(
         selectInput(
