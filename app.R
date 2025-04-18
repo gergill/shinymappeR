@@ -107,7 +107,7 @@ ui <- navbarPage(
   ),
 
 
-  # level set input panel -------------------------------------------------------
+  # level set display panel -------------------------------------------------------
 
   tabPanel(
     "Level Sets",
