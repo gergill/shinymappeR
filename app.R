@@ -101,30 +101,18 @@ ui <- navbarPage(
           "PCA-1",
           "PCA-2"
         )
+      ),
+      sliderInput(
+        inputId = "display_patch",
+        label = "Patch to Display: ",
+        value = 1,
+        min = 1,
+        max = 2,
+        step = 1
       )
     ),
-    mainPanel(plotOutput("filtered_data")))
+    mainPanel(plotOutput("filtered_data"), plotOutput("patch_view")))
   ),
-
-
-  # level set input panel -------------------------------------------------------
-
-  tabPanel(
-    "Level Sets",
-    sidebarLayout(
-      sidebarPanel(
-        sliderInput(
-          inputId = "display_patch",
-          label = "Patch to Display: ",
-          value = 1,
-          min = 1,
-          max = 2,
-          step = 1
-        )
-      ),
-      mainPanel(plotOutput("patch_view"))
-    )
-  )
 )
 
 
