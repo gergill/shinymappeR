@@ -112,7 +112,7 @@ ui <- navbarPage(
       )
     ),
     mainPanel(plotOutput("filtered_data"), plotOutput("patch_view")))
-  ),
+  )
 )
 
 
