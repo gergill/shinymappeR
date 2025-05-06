@@ -29,7 +29,7 @@ data_inputs <- sidebar(
 ui <- page_sidebar(
   title = "Dataset Generation",
   sidebar = data_inputs,
-  !cards
+  !!!cards
 )
 
 server <- function(input, output) {
