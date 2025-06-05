@@ -99,8 +99,8 @@ get_hierarchical_clusters <- function(dist_mats, method, cut_height) {
 #' @param dend A single dendrogram.
 #'
 #' @return The height of the tallest branch (longest time between merge heights) of the input dendrogram.
-get_tallest_branch_height <- function(dend) {
-  heights = sort(unique(cophenetic(dend)))
+get_tallest_branch_height <- function(dend, max_height) {
+  heights = append(sort(unique(cophenetic(dend))), max_height)
   # if (length(heights) <= 1) {
   #   return(max(heights))
   # }
@@ -137,7 +137,8 @@ get_tallest_branch_height <- function(dend) {
 #' create_1D_mapper_object(data, dist(data), projx, cover, hierarchical_clusterer("mcquitty"))
 global_tallest_hierarchical_clusterer <- function(method, dists) {
   global_linkage = as.dendrogram(run_link(dists, method))
-  cut_height = get_tallest_branch_height(global_linkage)
+  max_dist = max(dists)
+  cut_height = get_tallest_branch_height(global_linkage, max_dist)
 #  plot_dendrogram(global_linkage, method, cut_height)
   return(function(dist_mats) get_hierarchical_clusters(dist_mats, method, cut_height))
 }
