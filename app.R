@@ -13,6 +13,7 @@ library(bslib)
 source("dataset_generation.R")
 source("lens_functions.R")
 source("global_clusterer.R")
+source("local_clusterer.R")
 
 color_gradient <- function(n, alpha = 0) {
   colors <- colorRampPalette(c('blue', 'gold', 'red'), space = "Lab")(n)
@@ -76,9 +77,14 @@ ui <- navbarPage(
                ),
                selectInput(
                  "method",
-                 "Clustering method",
+                 "Linkage method",
                  choices = c("single", "complete", "average", "ward.D2", "mcquitty")
-               )
+               ),
+	       selectInput(
+		"clusterer",
+		"Cutting Height Method",
+		choices = c("global", "local")
+	       )
              ),
 
              # plot mapper graph
@@ -191,6 +197,17 @@ server <- function(input, output) {
     )
   })
 
+  # select global/local clusterer
+  clusterer = reactive({
+    data = data()
+    dists = dist(data)
+    switch(
+	   input$clusterer,
+	   "local" = local_tallest_hierarchical_clusterer(input$method),
+	   "global" = global_tallest_hierarchical_clusterer(input$method, dists)
+    )
+  })
+
   # generate mapper graph
   mapper = reactive({
     # grab current data
@@ -202,12 +219,15 @@ server <- function(input, output) {
     # grab current cover
     cover = cover()
 
+    # grab current clusterer
+    clusterer = clusterer()
+
     # create mapper graph
     create_1D_mapper_object(data,
                             dist(data),
                             filtered_data,
 			    cover,
-                            clusterer = global_tallest_hierarchical_clusterer(input$method, dist(data)))
+                            clusterer)
   })
 
 

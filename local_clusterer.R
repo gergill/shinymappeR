@@ -37,20 +37,15 @@ cut_dendrogram <- function(dend, cut_height) {
   return(cutree(dend, h = cut_height))
 }
 
-#' Cut many dendrograms at the same height
-#'
-#' @param dends A list of dendrograms to be cut.
-#' @param cut_height The height value at which to cut the dendrograms.
-#'
-#' @return A list of named vectors (one per dendrogram) whose names are data point names and whose values are cluster labels.
-process_dendrograms <- function(dends, cut_height) {
+# cut many dendrograms at different heights
+process_dendrograms <- function(dends, cut_heights) {
   if (inherits(dends, "hclust")) {
-    return(cut_dendrogram(dends, cut_height))
+    return(cut_dendrogram(dends, cut_heights))
   }
 
-  snipped_dends = sapply(dends,
-                         cut_dendrogram, 
-			 cut_height = cut_height)
+  snipped_dends = mapply(cut_dendrogram,
+                         dends, 
+			 cut_heights)
   return(snipped_dends)
 }
 
@@ -72,9 +67,12 @@ plot_dendrogram <- function(dend, method, cut_height) {
 #' @param method A string to pass to [hclust] to tell it what kind of clustering to do.
 #'
 #' @return A list containing named vectors (one per dendrogram), whose names are data point names and whose values are cluster labels.
-get_global_hierarchical_clusters <- function(dist_mats, method, cut_height) {
+get_hierarchical_clusters <- function(dist_mats, method) {
   # do agglomerative clustering on distance matrices
   dends = lapply(dist_mats, run_link, method)
+
+  max_dists = sapply(dist_mats, max)
+  nonzero_max_dists = max_dists[max_dists != 0]
 
   # we would like to cut non-trivial dendrograms to determine number of clusters
   real_dends = dends[lapply(dends, length) > 1]
@@ -82,8 +80,11 @@ get_global_hierarchical_clusters <- function(dist_mats, method, cut_height) {
 
 #  sapply(real_dends, plot_dendrogram, method = method, cut_height = cut_height)
 
+  # get cut heights of each dendrogram
+  cut_heights = mapply(get_tallest_branch_height, real_dends, max_dists)
+
   # cut nontrival dendrograms and get clusters
-  processed_dends = process_dendrograms(real_dends, cut_height)
+  processed_dends = process_dendrograms(real_dends, cut_heights)
 
   # combine nontrival and trivial clusterings and return results
   if (length(imposter_dends) != 0) {
@@ -135,10 +136,7 @@ get_tallest_branch_height <- function(dend, max_height) {
 #' cover = create_width_balanced_cover(min(projx), max(projx), num_bins, percent_overlap)
 #'
 #' create_1D_mapper_object(data, dist(data), projx, cover, hierarchical_clusterer("mcquitty"))
-global_tallest_hierarchical_clusterer <- function(method, dists) {
-  global_linkage = as.dendrogram(run_link(dists, method))
-  max_dist = max(dists)
-  cut_height = get_tallest_branch_height(global_linkage, max_dist)
+local_tallest_hierarchical_clusterer <- function(method) {
 #  plot_dendrogram(global_linkage, method, cut_height)
-  return(function(dist_mats) get_global_hierarchical_clusters(dist_mats, method, cut_height))
+  return(function(dist_mats) get_hierarchical_clusters(dist_mats, method))
 }
