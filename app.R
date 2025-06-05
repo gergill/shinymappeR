@@ -12,6 +12,7 @@ library(mappeR)
 library(bslib)
 source("dataset_generation.R")
 source("lens_functions.R")
+source("global_clusterer.R")
 
 color_gradient <- function(n, alpha = 0) {
   colors <- colorRampPalette(c('blue', 'gold', 'red'), space = "Lab")(n)
@@ -205,8 +206,8 @@ server <- function(input, output) {
     create_1D_mapper_object(data,
                             dist(data),
                             filtered_data,
-                            cover,
-                            clusterer = hierarchical_clusterer(input$method))
+			    cover,
+                            clusterer = global_tallest_hierarchical_clusterer(input$method, dist(data)))
   })
 
 

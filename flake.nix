@@ -17,7 +17,7 @@
       {
         devShells.default = pkgs.mkShell { 
 	packages = [ pkgs.bashInteractive ];
-	buildInputs = with pkgs; [ R rPackages.mappeR rPackages.shiny rPackages.devtools rPackages.ggplot2 ];
+	buildInputs = with pkgs; [ R rPackages.mappeR rPackages.shiny rPackages.dendextend rPackages.RColorBrewer rPackages.devtools rPackages.ggplot2 ];
 	};
       }
     );

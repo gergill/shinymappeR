@@ -45,11 +45,12 @@ cut_dendrogram <- function(dend, cut_height) {
 #' @return A list of named vectors (one per dendrogram) whose names are data point names and whose values are cluster labels.
 process_dendrograms <- function(dends, cut_height) {
   if (inherits(dends, "hclust")) {
-    return(cut_dendrogram(dends, 0))
+    return(cut_dendrogram(dends, cut_height))
   }
 
   snipped_dends = sapply(dends,
-                         cut_dendrogram, cut_height = cut_height)
+                         cut_dendrogram, 
+			 cut_height = cut_height)
   return(snipped_dends)
 }
 
@@ -79,7 +80,7 @@ get_hierarchical_clusters <- function(dist_mats, method, cut_height) {
   real_dends = dends[lapply(dends, length) > 1]
   imposter_dends = dends[lapply(dends, length) == 1]
 
-  sapply(real_dends, plot_dendrogram, method = method, cut_height = cut_height)
+#  sapply(real_dends, plot_dendrogram, method = method, cut_height = cut_height)
 
   # cut nontrival dendrograms and get clusters
   processed_dends = process_dendrograms(real_dends, cut_height)
@@ -137,6 +138,6 @@ get_tallest_branch_height <- function(dend) {
 global_tallest_hierarchical_clusterer <- function(method, dists) {
   global_linkage = as.dendrogram(run_link(dists, method))
   cut_height = get_tallest_branch_height(global_linkage)
-  plot_dendrogram(global_linkage, method, cut_height)
+#  plot_dendrogram(global_linkage, method, cut_height)
   return(function(dist_mats) get_hierarchical_clusters(dist_mats, method, cut_height))
 }
