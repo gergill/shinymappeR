@@ -14,6 +14,7 @@ source("dataset_generation.R")
 source("lens_functions.R")
 source("global_clusterer.R")
 source("local_clusterer.R")
+source("plot_dendrograms.R")
 
 color_gradient <- function(n, alpha = 0) {
   colors <- colorRampPalette(c('blue', 'gold', 'red'), space = "Lab")(n)
@@ -88,7 +89,7 @@ ui <- navbarPage(
              ),
 
              # plot mapper graph
-             mainPanel(plotOutput("staggered_data"), plotOutput("mapper"))
+             mainPanel(plotOutput("staggered_data"), plotOutput("mapper"), plotOutput("dendrogram"))
            )
   ),
 
@@ -306,6 +307,16 @@ server <- function(input, output) {
   output$mapper <- renderPlot({
     # plot igraph object obtained from mappeR
     plot(mapper_object_to_igraph(mapper()))
+  })
+
+  output$dendrogram <- renderPlot({
+    data = data()
+    dists = dist(data)
+    dend = hclust(dists, input$method)
+
+    plot(dend)
+
+    # plot(plot_dendrogram(dend, input$method, 2, max(dists)))
   })
 
   # plot of "staggered" level sets for x/y projection
