@@ -33,7 +33,6 @@ run_link <- function(dist, method) {
 cut_dendrogram <- function(dend, cut_height) {
   # p = ggdendrogram(dend, rotate = FALSE, size = 2)
   # plot(p)
-  dend = as.dendrogram(dend)
   return(cutree(dend, h = cut_height))
 }
 
@@ -47,18 +46,6 @@ process_dendrograms <- function(dends, cut_heights) {
                          dends,
 			 cut_heights)
   return(snipped_dends)
-}
-
-plot_dendrogram <- function(dend, method, cut_height) {
-  dend = as.dendrogram(dend)
-  clust = cutree(dend, h=cut_height)
-  num_clusts = length(unique(clust))
-  dend = color_branches(dend, k = num_clusts, col = brewer.pal(num_clusts, "Dark2"))
-  dend = color_labels(dend, k = num_clusts, col = brewer.pal(num_clusts, "Dark2"))
-  labels_cex(dend) = .75
-  par(cex.axis = 1, cex.main = 2, cex.sub = 1.5, bg = "#f7f7f7", cex.lab = 1, mar = c(5, 4, 4, 2) + .1)
-  plot(hang.dendrogram(dend, hang = -1), main = paste(method, "linkage clustering"), xlab = paste("cut height:", cut_height, "number of clusters:", num_clusts))
-  abline(h=cut_height, lty = 2)
 }
 
 #' Perform hierarchical clustering and process dendrograms.
@@ -95,6 +82,7 @@ get_hierarchical_clusters <- function(dist_mats, method) {
   }
 }
 
+
 #' Find the tallest branch of a dendrogram
 #'
 #' @param dend A single dendrogram.
@@ -102,9 +90,9 @@ get_hierarchical_clusters <- function(dist_mats, method) {
 #' @return The height of the tallest branch (longest time between merge heights) of the input dendrogram.
 get_tallest_branch_height <- function(dend, max_height) {
   heights = append(sort(unique(cophenetic(dend))), max_height)
-  # if (length(heights) <= 1) {
-  #   return(max(heights))
-  # }
+  if (length(heights) <= 2) {
+    return(max(heights))
+  }
   branch_lengths = diff(heights) # differences are branch lengths
 
   tallest_branch_height = max(branch_lengths)

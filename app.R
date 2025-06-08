@@ -8,9 +8,6 @@
 
 library(shiny)
 library(devtools)
-
-install_github("https://github.com/Uiowa-Applied-Topology/mappeR/tree/dev")
-
 library(mappeR)
 library(bslib)
 source("dataset_generation.R")
@@ -89,10 +86,11 @@ ui <- navbarPage(
 		"Cutting Height Method",
 		choices = c("global", "local")
 	       )
+
              ),
 
              # plot mapper graph
-             mainPanel(plotOutput("staggered_data"), plotOutput("mapper"), plotOutput("global_dendrogram"))
+             mainPanel(plotOutput("staggered_data"), plotOutput("mapper"))
            )
   ),
 
@@ -100,7 +98,7 @@ ui <- navbarPage(
   # lens input panel --------------------------------------------------------
 
   tabPanel(
-    "Lens Functions",
+    "Patch Dendrograms",
     sidebarLayout(sidebarPanel(
       selectInput(
         "lens_seg",
@@ -122,7 +120,7 @@ ui <- navbarPage(
         step = 1
       )
     ),
-    mainPanel(plotOutput("filtered_data"), plotOutput("patch_view"), plotOutput("patch_dendrogram")))
+    mainPanel(plotOutput("patch_view"), plotOutput("patch_dendrogram"), plotOutput("global_dendrogram")))
   )
 )
 
@@ -282,6 +280,8 @@ server <- function(input, output) {
 
     vertices = mapper[[1]]
 
+    print(vertices$bin)
+
     this_patch = vertices[vertices$bin == input$display_patch, ]
     this_patch_data = this_patch[, "data"]
     this_patch_names = unlist(strsplit(this_patch_data, ","))
@@ -319,11 +319,20 @@ server <- function(input, output) {
     this_patch_names = unlist(strsplit(this_patch_data, ","))
     rows = as.numeric(this_patch_names)
     datasub = data[rows, ]
-    dists = dist(datasub)
+    patch_dists = dist(datasub)
+    global_dists = dist(data)
 
-    dend = hclust(dists, input$method)
+    patch_dend = hclust(patch_dists, input$method)
+    global_dend = hclust(global_dists, input$method)
 
-    plot_dendrogram(dend, input$method, max(dists))
+    if (input$clusterer == "global") {
+      cut_height = get_tallest_branch_height(global_dend, max(global_dists))
+
+    plot_dendrogram(patch_dend, input$method, max(global_dists), cut_height, paste("Patch", input$display_patch, ":", input$method, "linkage clustering"))
+    } else {
+      cut_height = get_tallest_branch_height(patch_dend, max(patch_dists))
+    plot_dendrogram(patch_dend, input$method, max(patch_dists), cut_height, paste("Patch", input$display_patch, ":", input$method, "linkage clustering"))
+    }
   })
 
   # output plot of mapper graph
@@ -337,7 +346,9 @@ server <- function(input, output) {
     dists = dist(data)
     dend = hclust(dists, input$method)
 
-    plot_dendrogram(dend, input$method, max(dists))
+    cut_height = get_tallest_branch_height(dend, max(dists))
+
+    plot_dendrogram(dend, input$method, max(dists), cut_height, paste("All data:", input$method, "linkage clustering"))
 
     # plot(plot_dendrogram(dend, input$method, 2, max(dists)))
   })
