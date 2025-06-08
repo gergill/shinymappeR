@@ -8,6 +8,9 @@
 
 library(shiny)
 library(devtools)
+
+install_github("https://github.com/Uiowa-Applied-Topology/mappeR/tree/dev")
+
 library(mappeR)
 library(bslib)
 source("dataset_generation.R")
