@@ -17,6 +17,7 @@ source("dataset_generation.R")
 source("lens_functions.R")
 source("global_clusterer.R")
 source("local_clusterer.R")
+source("plot_dendrograms.R")
 
 color_gradient <- function(n, alpha = 0) {
   colors <- colorRampPalette(c('blue', 'gold', 'red'), space = "Lab")(n)
@@ -91,7 +92,7 @@ ui <- navbarPage(
              ),
 
              # plot mapper graph
-             mainPanel(plotOutput("staggered_data"), plotOutput("mapper"))
+             mainPanel(plotOutput("staggered_data"), plotOutput("mapper"), plotOutput("global_dendrogram"))
            )
   ),
 
@@ -121,7 +122,7 @@ ui <- navbarPage(
         step = 1
       )
     ),
-    mainPanel(plotOutput("filtered_data"), plotOutput("patch_view")))
+    mainPanel(plotOutput("filtered_data"), plotOutput("patch_view"), plotOutput("patch_dendrogram")))
   )
 )
 
@@ -305,10 +306,40 @@ server <- function(input, output) {
     )
   })
 
+  output$patch_dendrogram <- renderPlot({
+    data = data()
+    filtered_data = filtered_data()
+    cover = cover()
+    mapper = mapper()
+
+    vertices = mapper[[1]]
+
+    this_patch = vertices[vertices$bin == input$display_patch, ]
+    this_patch_data = this_patch[, "data"]
+    this_patch_names = unlist(strsplit(this_patch_data, ","))
+    rows = as.numeric(this_patch_names)
+    datasub = data[rows, ]
+    dists = dist(datasub)
+
+    dend = hclust(dists, input$method)
+
+    plot_dendrogram(dend, input$method, max(dists))
+  })
+
   # output plot of mapper graph
   output$mapper <- renderPlot({
     # plot igraph object obtained from mappeR
     plot(mapper_object_to_igraph(mapper()))
+  })
+
+  output$global_dendrogram <- renderPlot({
+    data = data()
+    dists = dist(data)
+    dend = hclust(dists, input$method)
+
+    plot_dendrogram(dend, input$method, max(dists))
+
+    # plot(plot_dendrogram(dend, input$method, 2, max(dists)))
   })
 
   # plot of "staggered" level sets for x/y projection

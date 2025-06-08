@@ -44,7 +44,7 @@ process_dendrograms <- function(dends, cut_heights) {
   }
 
   snipped_dends = mapply(cut_dendrogram,
-                         dends, 
+                         dends,
 			 cut_heights)
   return(snipped_dends)
 }
@@ -109,7 +109,7 @@ get_tallest_branch_height <- function(dend, max_height) {
 
   tallest_branch_height = max(branch_lengths)
   tallest_branch_id = which(branch_lengths == tallest_branch_height)
-  cutval = (heights[tallest_branch_id] + heights[tallest_branch_id + 1]) / 2 # midpoint of tallest branch
+  cutval = heights[tallest_branch_id] + .05*tallest_branch_height
 
   if (length(cutval) > 1) {
     cutval = sample(cutval, 1)
