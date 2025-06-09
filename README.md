@@ -12,36 +12,20 @@ To run the application you will need R and the Shiny package installed. You can 
 
 ### Prerequisites:
 Ensure you have the following R packages:
-- shiny: To build the web application interface
-- mappeR: for mapper of course!
-- devtools: to build the project
+- `shiny`: To build the web application interface
+- `mappeR`: for mapper of course!
+- `dendextend`: for visualization of dendrograms
+- `igraph`: for visualization of graphs
 
 you can install these packages using the following commands in the R Console:
 ```R
 install.packages("shiny")
 install.packages("mappeR")
-install.packages("devtools")
+install.packages("dendextend")
+install.packages("igraph")
 ```
 ### How to Run:
 Open the app.R file in RStudio, click Run App at the top.
-
-### Features:
-- Dataset Selection:
-  - circle
-  - figure 8
-  - spiral
-  - barbell
-- Parameter Adjustments:
-  - number of points
-  - projection coordinate
-  - number of bins
-  - percent overlap
-  - clustering method
-- Visualizations:
-  - input data plot
-    - shows the selected dataset with color coded bins
-  - Mapper graph plot (also color coded)
-
 
 ### How to Contribute:
 

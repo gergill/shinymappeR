@@ -1,16 +1,23 @@
 library(dendextend)
 library(igraph)
 
+color_gradient <- function(n, alpha = 0) {
+  colors <- colorRampPalette(c('blue', 'gold', 'red'), space = "Lab")(n)
+  if (alpha == 0) {
+    return(colors)
+  } else {
+    return(paste(colors, sprintf("%x", ceiling(255 * alpha)), sep = ""))
+  }
+}
+
 plot_dendrogram <- function(dend, method, max_height, cut_height, title, subtitle) {
 
-  clust = cutree(dend, h=cut_height)
-  num_clusts = length(unique(clust))
-  dend = as.dendrogram(dend)
-  dend = suppressWarnings(color_branches(dend, k = num_clusts, col = brewer.pal(num_clusts, "Dark2")))
-  dend = suppressWarnings(color_labels(dend, k = num_clusts, col = brewer.pal(num_clusts, "Dark2")))
-  par(cex.axis = 1, cex.main = 2, cex.sub = 1, bg = "#f7f7f7", mar = c(5, 4, 4, 1) + .1)
-  # plot(dend, ylim = max_height, hang = -1, xlab = paste("number of clusters", num_clusts))
-  labels(dend) = rep(NA, length(order.dendrogram(dend)))
+  clust = cutree(dend, h=cut_height) # find cluster assignments
+  num_clusts = length(unique(clust)) # get number of clusters
+  dend = as.dendrogram(dend) # enables us to color and customize dendrogram for plotting
+  dend = color_branches(dend, k = num_clusts, col = brewer.pal(num_clusts, "Dark2")) # color branches by cluster (brewer wants at least 3 colors)
+  par(cex.axis = 1, cex.main = 2, cex.sub = 1, bg = "#f7f7f7", mar = c(5, 4, 4, 1) + .1) # customize margins, etc
+  labels(dend) = rep(NA, length(order.dendrogram(dend))) # get rid of dendrogram labels (they look ugly imo)
   plot(dend,
        main = title,
        sub = subtitle,
@@ -18,15 +25,15 @@ plot_dendrogram <- function(dend, method, max_height, cut_height, title, subtitl
        ylim = c(0, max_height),
        ylab = "Merge Height")
 
-  abline(h=cut_height, lty = 2)
-  nodes = get_nodes_xy(dend)
-  sorted_nodes = nodes[order(nodes[,2]),]
+  abline(h=cut_height, lty = 2) # draw cutline through dendrogram
+  nodes = get_nodes_xy(dend) # get list of vertex coordinates of dendrogram
+  sorted_nodes = nodes[order(nodes[,2]),] # sort vertices by y coordinate
   if (num_clusts == 1) {
     color = "#1B9E77"
   } else {
     color = "black"
   }
-  segments(x0 = sorted_nodes[nrow(nodes), 1], y0 = sorted_nodes[nrow(nodes),2], y1 = max_height, col = color)
+  segments(x0 = sorted_nodes[nrow(nodes), 1], y0 = sorted_nodes[nrow(nodes),2], y1 = max_height, col = color) # draw vertical from the top vertex of the dendrogram to the maximum pairwise distance
 }
 
 # igraph ------------------------------------------------------------------
@@ -71,11 +78,10 @@ mapper_to_igraph <- function(mapperobject) {
   # color nodes if binning
   if ("bin" %in% colnames(vertices)) {
     num_bins = max(vertices$bin)
-    colfunc = colorRampPalette(c("blue", "gold", "red"), space = "Lab")
     mappergraph = set_vertex_attr(mappergraph,
                                   "color",
                                   value = sapply(vertices$bin, function(x)
-                                    colfunc(num_bins)[x]))
+                                    color_gradient(num_bins, 0)[x]))
   }
 
   return(mappergraph)

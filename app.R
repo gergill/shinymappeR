@@ -7,28 +7,13 @@
 #
 
 library(shiny)
-library(devtools)
 library(mappeR)
-library(bslib)
 source("dataset_generation.R")
 source("lens_functions.R")
-source("global_clusterer.R")
-source("local_clusterer.R")
+source("hierarchical_clusterers.R")
 source("plot_dendrograms.R")
 
-color_gradient <- function(n, alpha = 0) {
-  colors <- colorRampPalette(c('blue', 'gold', 'red'), space = "Lab")(n)
-  if (alpha == 0) {
-    return(colors)
-  } else {
-    return(paste(colors, sprintf("%x", ceiling(255 * alpha)), sep = ""))
-  }
-}
-
-
-
 # user interface ----------------------------------------------------------
-
 
 ui <- navbarPage(
   "1D Mapper",
@@ -150,7 +135,7 @@ server <- function(input, output) {
 
   ## data generation and mapper steps ----------------------------------------
 
-  # generate sample data
+  # data
   data = reactive({
     switch(
       input$data,
@@ -162,7 +147,7 @@ server <- function(input, output) {
     )
   })
 
-  # filter data
+  # run data through lens function
   filtered_data = reactive({
     # grab current data
     data = data()
@@ -177,7 +162,7 @@ server <- function(input, output) {
     )
   })
 
-  # generate cover
+  # use mappeR to get a width-balanced cover of our dataset
   cover = reactive({
     # grab current data
     data = data()
@@ -194,18 +179,18 @@ server <- function(input, output) {
     )
   })
 
-  # select global/local clusterer
+  # select global/local cutting height option
   clusterer = reactive({
     data = data()
     dists = dist(data)
     switch(
       input$clusterer,
-      "local" = local_tallest_hierarchical_clusterer(input$method),
-      "global" = global_tallest_hierarchical_clusterer(input$method, dists)
+      "local" = local_hierarchical_clusterer(input$method),
+      "global" = global_hierarchical_clusterer(input$method, dists)
     )
   })
 
-  # generate mapper graph
+  # use mappeR to run Mapper algorithm
   mapper = reactive({
     # grab current data
     data = data()
@@ -222,7 +207,6 @@ server <- function(input, output) {
     # create mapper graph
     create_1D_mapper_object(data, dist(data), filtered_data, cover, clusterer)
   })
-
 
   ## output plots ------------------------------------------------------------
 
@@ -247,6 +231,7 @@ server <- function(input, output) {
     )
   })
 
+  # output plot of patch clustering and dendrogram
   output$patch_view <- renderPlot({
 
     # we will need these values for patch and dendrogram visualization
@@ -314,23 +299,12 @@ server <- function(input, output) {
     }
   })
 
+  # output plot of global dataset clustering and dendrogram
   output$global_view <- renderPlot({
     data = data()
-    cover = cover()
-    mapper = mapper()
-
-    vertices = mapper[[1]]
-
-    this_patch = vertices[vertices$bin == input$display_patch, ]
-    this_patch_data = this_patch[, "data"]
-    this_patch_names = unlist(strsplit(this_patch_data, ","))
-    rows = as.numeric(this_patch_names)
-    datasub = data[rows, ]
-    patch_dists = dist(datasub)
     global_dists = dist(data)
 
-
-    global_dend = hclust(global_dists, input$method)
+    global_dend = hclust(global_dists, input$method) # hierarchical clustering
     global_cut_height = get_tallest_branch_height(global_dend, max(global_dists))
 
     par(mfrow = c(1, 2))
@@ -340,7 +314,7 @@ server <- function(input, output) {
     cols = brewer.pal(num_clusts, "Dark2")
     data_cols = sapply(clusters, function(x) cols[x])
 
-    # plot data with appropriate coloring
+    # plot entire dataset with coloring via clusters
     plot(
       data,
       pch = 20,
@@ -367,10 +341,9 @@ server <- function(input, output) {
     plot(mapper_to_igraph(mapper()))
   })
 
-  # plot of "staggered" level sets for x/y projection
+  # plot of data with overlaid patches
   output$staggered_data <- renderPlot({
     data = data()
-    filtered_data = filtered_data()
     cover = cover()
 
     # plot data
@@ -379,6 +352,7 @@ server <- function(input, output) {
          pch = 20,
          asp = 1)
 
+    # plot overlaying patches depending on lens (and cover)
     if (input$lens == "project to x") {
       rect(cover[, 1],
            min(data$y),
@@ -391,6 +365,60 @@ server <- function(input, output) {
            max(data$x),
            cover[, 1],
            col = color_gradient(input$num_patches, .5))
+    } else if (input$lens == "PCA-1") { # this code for PCA rectangles from Jacob Miller
+        # draw PCA line
+        pca_output <- prcomp(data, center = FALSE, scale. = FALSE)
+        pca_vector <- pca_output$rotation[,1]
+        slope <- pca_vector[2] / pca_vector[1]
+        abline(0, slope, col = "green", lwd = 3, lty = 3)
+
+        # calculate perpendicular vector
+        perp_vector <- c(-pca_vector[2], pca_vector[1])
+        perp_vector <- perp_vector / sqrt(sum(perp_vector^2)) # normalize
+
+        # color (super annoying) bins using a loop since polygon
+        for (i in 1:nrow(cover)) {
+          # calculate cut points for bins on the pca line
+          cut1 <- cover[i, 1] * pca_vector
+          cut2 <- cover[i, 2] * pca_vector
+          # the 100 is just to make sure the bins don't get cutoff in the image
+          corner1 <- cut1 + 100 * perp_vector
+          corner2 <- cut1 - 100 * perp_vector
+          corner3 <- cut2 - 100 * perp_vector
+          corner4 <- cut2 + 100 * perp_vector
+
+          # Draw filled rectangle using polygon since rect didn't work :((
+          polygon(x = c(corner1[1], corner2[1], corner3[1], corner4[1]),
+                  y = c(corner1[2], corner2[2], corner3[2], corner4[2]),
+                  col = color_gradient(input$num_patches, .5)[i])
+        }
+    } else if (input$lens == "PCA-2") { # also from Jacob Miller
+      # draw PCA line
+      pca_output <- prcomp(data, center = FALSE, scale. = FALSE)
+      pca_vector <- pca_output$rotation[,2]
+      slope <- pca_vector[2] / pca_vector[1]
+      abline(0, slope, col = "green", lwd = 3, lty = 3)
+
+      # calculate perpendicular vector
+      perp_vector <- c(-pca_vector[2], pca_vector[1])
+      perp_vector <- perp_vector / sqrt(sum(perp_vector^2)) # normalize
+
+      # color (super annoying) bins using a loop since polygon
+      for (i in 1:nrow(cover)) {
+        # calculate cut points for bins on the pca line
+        cut1 <- cover[i, 1] * pca_vector
+        cut2 <- cover[i, 2] * pca_vector
+        # the 100 is just to make sure the bins don't get cutoff in the image
+        corner1 <- cut1 + 100 * perp_vector
+        corner2 <- cut1 - 100 * perp_vector
+        corner3 <- cut2 - 100 * perp_vector
+        corner4 <- cut2 + 100 * perp_vector
+
+        # Draw filled rectangle using polygon since rect didn't work :((
+        polygon(x = c(corner1[1], corner2[1], corner3[1], corner4[1]),
+                y = c(corner1[2], corner2[2], corner3[2], corner4[2]),
+                col = color_gradient(input$num_patches, .5)[i])
+      }
     }
   })
 }
