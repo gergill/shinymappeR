@@ -36,7 +36,7 @@ ui <- navbarPage(
 
   # lens input panel --------------------------------------------------------
 
-	tabPanel("Data, Lenses, and Covering",
+	tabPanel("Data and Lenses",
 		sidebarLayout(
 			sidebarPanel(
 			
@@ -74,7 +74,19 @@ ui <- navbarPage(
 					  "PCA-1",
 					  "PCA-2"
 					  )
+					)
+
 					),
+					mainPanel(
+						plotOutput("filtered_data"), 
+						plotOutput("mapper")
+					)
+				)
+			),
+
+			tabPanel("Covering and Clustering",
+				 sidebarLayout(
+				sidebarPanel(
 
 				sliderInput(
 					"num_patches",
@@ -89,21 +101,10 @@ ui <- navbarPage(
 						min = 0,
 						max = 100,
 						value = 25
-						)
-					),
-					mainPanel(
-						plotOutput("staggered_data"), 
-						plotOutput("mapper")
-					)
-				)
-			),
-
-			tabPanel("Hierarchical Clustering",
-				 sidebarLayout(
-				sidebarPanel(
+						),
 					sliderInput(
 						inputId = "display_patch",
-						label = "Patch to Display: ",
+						label = "Patch to display: ",
 						value = 1,
 						min = 1,
 					max = 2,
@@ -124,6 +125,7 @@ ui <- navbarPage(
 			)
 				,
 				mainPanel(
+					plotOutput("staggered_data"),
 					plotOutput("patch_view"),
 					plotOutput("dendrograms")
 				)
@@ -290,23 +292,8 @@ ui <- navbarPage(
 
 	    par(mfrow = c(1, 2))
 
-	    plot(
-	      datasub,
-	      pch = 20,
-	      axes = FALSE,
-	      xlab = "",
-	      ylab = "",
-	      asp = 1
-	    )
 
-	    rect(
-	      min(datasub$x),
-	      min(datasub$y),
-	      max(datasub$x),
-	      max(datasub$y),
-	      col = color_gradient(input$num_patches, .5)[[input$display_patch]]
-	    )
-
+	    col <- color_gradient(50)[as.numeric(cut(filtered_data, breaks = 50))]
 
 	    patch_dend = hclust(patch_dists, input$method)
 	    global_dend = hclust(global_dists, input$method)
@@ -315,8 +302,28 @@ ui <- navbarPage(
 
 	    patch_cut_height = global_cut_height
 
-	    if (input$clusterer == "local") {
+	    if(input$clusterer == "local") {
 	      patch_cut_height = get_tallest_branch_height(patch_dend, max(patch_dists))
+	    }
+	    
+	    clusters = cutree(patch_dend, h = patch_cut_height)
+	    num_clusts = length(unique(clusters))
+	    cols = brewer.pal(num_clusts, "Dark2")
+	    data_cols = sapply(clusters, function(x) cols[x])
+
+	    # plot data with appropriate coloring
+	    plot(
+	      datasub,
+	      pch = 20,
+	      axes = FALSE,
+	      xlab = "",
+	      ylab = "",
+	      col = data_cols,
+	      asp = 1
+	    )
+
+
+	    if (input$clusterer == "local") {
 
 	    plot_dendrogram(patch_dend, input$method, max(patch_dists), patch_cut_height, paste("Patch", input$display_patch), paste("Linkage:", input$method))
 	    } else {
@@ -350,6 +357,11 @@ ui <- navbarPage(
 	    # create a vector of colors according to lens function
 	    col <- color_gradient(50)[as.numeric(cut(filtered_data, breaks = 50))]
 
+	    clusters = cutree(global_dend, h = global_cut_height)
+	    num_clusts = length(unique(clusters))
+	    cols = brewer.pal(num_clusts, "Dark2")
+	    data_cols = sapply(clusters, function(x) cols[x])
+
 	    # plot data with appropriate coloring
 	    plot(
 	      data,
@@ -357,7 +369,7 @@ ui <- navbarPage(
 	      axes = FALSE,
 	      xlab = "",
 	      ylab = "",
-	      col = col,
+	      col = data_cols,
 	      asp = 1
 	    )
 	    plot_dendrogram(global_dend, input$method, max(global_dists), global_cut_height, "All Data", paste("Linkage:", input$method))
@@ -376,7 +388,7 @@ ui <- navbarPage(
 	    cover = cover()
 
 	    # plot data
-	    plot(data, pch = 20)
+	    plot(data, xlim = c(min(data$x), max(data$x)), pch = 20, asp = 1)
 
 	    if (input$lens == "project to x") {
 	      rect(cover[, 1], min(data$y), cover[, 2], max(data$y), col = color_gradient(input$num_patches, .5))
