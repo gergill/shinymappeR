@@ -50,7 +50,7 @@ get_longevity_cut_height <- function(dend, max_height = max(cophenetic(dend))) {
 
   tallest_branch_height = max(branch_lengths)
   tallest_branch_id = which(branch_lengths == tallest_branch_height)
-  cutval = heights[tallest_branch_id] + .05*tallest_branch_height
+  cutval = heights[tallest_branch_id] + .025*tallest_branch_height
 
   if (length(cutval) > 1) {
     cutval = sample(cutval, 1)
