@@ -9,6 +9,7 @@ filter_data <- function(input, data) {
 
 pca_filter <- function(data) {
   pca_output = prcomp(data, center = FALSE, scale. = FALSE)
+  print(pca_output)
   return(pca_output$x[,1])
 }
 

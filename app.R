@@ -178,8 +178,8 @@ ui <- navbarPage(
 	      "project to x" = data$x,
 	      "project to y" = data$y,
 	      "use eccentricity value" = eccentricity(data),
-	      "PCA-1" = pca_filter(data, 1),
-	      "PCA-2" = pca_filter(data, 2)
+	      "PCA-1" = prcomp(data, center = FALSE, scale. = FALSE)$x[,1],
+	      "PCA-2" = prcomp(data, center = FALSE, scale. = FALSE)$x[,2]
 	    )
 	  })
 
