@@ -189,6 +189,7 @@ server <- function(input, output) {
       "global" = global_hierarchical_clusterer(input$method, dists)
     )
   })
+
   # use mappeR to run Mapper algorithm
   mapper = reactive({
     # grab current data
