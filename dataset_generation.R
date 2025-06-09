@@ -1,13 +1,3 @@
-generate_data <- function(input, num_points, noise) {
-  switch(input,
-         "circle" = generate_circle(num_points, noise),
-	 "fading circle" = generate_fading_circle(num_points, noise),
-         "figure 8" = generate_figure_eight(num_points, noise),
-         "spiral" = generate_spiral(num_points, noise),
-         "barbell" = generate_barbell(num_points, noise),
-         generate_circle(num_points, noise))
-}
-
 generate_circle <- function(num_points, noise) {
   return(data.frame(
     x = sapply(1:num_points, cos) + runif(num_points, 0, noise),
