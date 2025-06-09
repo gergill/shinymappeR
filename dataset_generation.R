@@ -18,9 +18,8 @@ generate_circle <- function(num_points, noise) {
 
 generate_fading_circle <- function(num_points, noise) {
   angles = rnorm(num_points, mean = 0, sd = 1)
-  top_half = data.frame(x = cos(angles) + runif(num_points, 0, noise),
-  			y = sin(angles) + runif(num_points, 0, noise))
-  return(top_half)
+  top_half = return(data.frame(x = cos(angles) + runif(num_points, 0, noise),
+                               y = sin(angles) + runif(num_points, 0, noise)))
 }
 
 generate_figure_eight <- function(num_points, noise) {
