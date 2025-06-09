@@ -1,5 +1,6 @@
 library(dendextend)
 library(igraph)
+library(RColorBrewer)
 
 color_gradient <- function(n, alpha = 0) {
   colors <- colorRampPalette(c('blue', 'gold', 'red'), space = "Lab")(n)
@@ -76,11 +77,11 @@ mapper_to_igraph <- function(mapperobject) {
   mappergraph = set_vertex_attr(mappergraph, "size", value = sqrt(vertices$cluster_size))
 
   # color nodes if binning
-  if ("bin" %in% colnames(vertices)) {
-    num_bins = max(vertices$bin)
+  if ("patch" %in% colnames(vertices)) {
+    num_bins = max(vertices$patch)
     mappergraph = set_vertex_attr(mappergraph,
                                   "color",
-                                  value = sapply(vertices$bin, function(x)
+                                  value = sapply(vertices$patch, function(x)
                                     color_gradient(num_bins, 0)[x]))
   }
 

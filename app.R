@@ -239,7 +239,7 @@ server <- function(input, output) {
     mapper = mapper()
     vertices = mapper[[1]]
 
-    this_patch = vertices[vertices$bin == input$display_patch, ] # get vertices of mapper graph in patch
+    this_patch = vertices[vertices$patch == input$display_patch, ] # get vertices of mapper graph in patch
     this_patch_data = this_patch[, "data"] # grab data names from patch
     this_patch_names = unlist(strsplit(this_patch_data, ",")) # convert name strings into vector of names
     rows = as.numeric(this_patch_names) # names are chars so this works
@@ -250,11 +250,11 @@ server <- function(input, output) {
     patch_dend = hclust(patch_dists, input$method) # hierarchical clustering on the patch
     global_dend = hclust(global_dists, input$method) # hierarchical clustering on the whole dataset
 
-    global_cut_height = get_tallest_branch_height(global_dend, max(global_dists)) # best cut height for global dendrogram
+    global_cut_height = get_longevity_cut_height(global_dend, max(global_dists)) # best cut height for global dendrogram
     patch_cut_height = global_cut_height # default patch cut value is same as global
 
     if (input$clusterer == "local") {
-      patch_cut_height = get_tallest_branch_height(patch_dend, max(patch_dists)) # individually find cut height if appropriate
+      patch_cut_height = get_longevity_cut_height(patch_dend, max(patch_dists)) # individually find cut height if appropriate
     }
 
     par(mfrow = c(1, 2)) # we want one row, two columns for the plot
@@ -304,7 +304,7 @@ server <- function(input, output) {
     global_dists = dist(data)
 
     global_dend = hclust(global_dists, input$method) # hierarchical clustering
-    global_cut_height = get_tallest_branch_height(global_dend, max(global_dists))
+    global_cut_height = get_longevity_cut_height(global_dend, max(global_dists))
 
     par(mfrow = c(1, 2))
 
