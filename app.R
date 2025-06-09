@@ -43,7 +43,7 @@ ui <- navbarPage(
 				selectInput(
 					"data",
 					"Dataset",
-					choices = c("circle", "figure 8", "spiral", "barbell")
+					choices = c("circle", "fading circle", "figure 8", "spiral", "barbell")
 					),
 			
 				sliderInput( # this is a slider
@@ -162,6 +162,7 @@ ui <- navbarPage(
 	    switch(
 	      input$data,
 	      "circle" = generate_circle(input$points, input$noise),
+	      "fading circle" = generate_fading_circle(input$points, input$noise),
 	      "figure 8" = generate_figure_eight(input$points, input$noise),
 	      "spiral" = generate_spiral(input$points, input$noise),
 	      "barbell" = generate_barbell(input$points, input$noise)
