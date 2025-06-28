@@ -152,7 +152,7 @@ server <- function(input, output) {
     # grab current data
     data = data()
 
-    switch(
+    res = switch(
       input$lens,
       "project to x" = data$x,
       "project to y" = data$y,
@@ -160,6 +160,8 @@ server <- function(input, output) {
       "PCA-1" = prcomp(data, center = FALSE, scale. = FALSE)$x[, 1],
       "PCA-2" = prcomp(data, center = FALSE, scale. = FALSE)$x[, 2]
     )
+    names(res) = row.names(data)
+    return(res)
   })
 
   # use mappeR to get a width-balanced cover of our dataset
