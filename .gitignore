@@ -1,7 +1,84 @@
-.Rproj.user
-.Rproj
+# R Project ----------------------------------------------------------
+
+# R session files
 .Rhistory
 .RData
 .Ruserdata
-.direnv
+
+# RStudio
+.Rproj.user/
+*.Rproj
+
+# renv and local environments
+renv/library/
+renv/staging/
+renv/python/
+.renv/
+.Renv
+.env
+.venv/
+
+# Packrat (legacy)
+packrat/lib*/
+packrat/src/
+
+# Targets (if used)
+.Rout
+.Rapp.history
+_targets/
+_cache/
+
+# Reports / R Markdown -----------------------------------------------
+
+# LaTeX intermediates (for R Markdown or Sweave)
+*.aux
+*.log
+*.out
+*.bbl
+*.blg
+*.toc
+*.lof
+*.lot
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.nav
+*.snm
+*.vrb
+*.bcf
+*.run.xml
+
+# Pandoc / knitr outputs
+*_cache/
+*_files/
+*.utf8.md
+*.knit.md
+
+# Jupyter / Quarto (if used with R)
+.ipynb_checkpoints/
+.quarto/
+
+# Environment / Automation -------------------------------------------
+
+# Direnv
+.direnv/
 .envrc
+
+# Just (task runner) logs
+.justfile.local
+
+# OS ---------------------------------------------------------------
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+Desktop.ini
+
+# Editors / IDEs -----------------------------------------------------
+
+.vscode/
+.idea/
+*.swp
+*.swo
