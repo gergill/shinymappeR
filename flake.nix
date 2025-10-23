@@ -12,6 +12,7 @@
 
       rEnv = pkgs.rWrapper.override {
         packages = with pkgs.rPackages; [
+          mappeR
           ggplot2
           shiny
           dplyr
@@ -20,6 +21,7 @@
           remotes
           RColorBrewer
           mclust
+          nortest
         ];
       };
 
