@@ -21,50 +21,50 @@ ui <- navbarPage(
 
 ## data and lenses --------------------------------------------------------
 
-  tabPanel("Data and Lenses", sidebarLayout(
-    sidebarPanel(
-      selectInput(
-        "data",
-        "Dataset",
-        choices = c("circle", "fading circle", "figure 8", "spiral", "barbell")
-      ),
-
-      sliderInput(
-        "points",
-        "Number of points",
-        value = 1000,
-        min = 100,
-        max = 2000,
-        step = 100
-      ),
-
-      sliderInput(
-        inputId = "noise",
-        label = "Noise",
-        value = .1,
-        min = 0,
-        max = 1,
-        step = 0.01
-      ),
-
-      selectInput(
-        "lens",
-        "Lens Function: ",
-        choices = c(
-          "project to x",
-          "project to y",
-          "use eccentricity value",
-          "PCA-1",
-          "PCA-2"
+  tabPanel(
+    "Data and Lenses",
+    sidebarLayout(
+      sidebarPanel(
+        selectInput(
+          "data",
+          "Dataset:",
+          choices = c("circle", "fading circle", "figure 8", "spiral", "barbell"),
+          selected = "circle"
+        ),
+        sliderInput(
+          "points",
+          "Number of points:",
+          min = 100,
+          max = 2000,
+          value = 1000,
+          step = 100
+        ),
+        sliderInput(
+          "noise",
+          "Noise:",
+          min = 0,
+          max = 1,
+          value = 0.1,
+          step = 0.01
+        ),
+        selectInput(
+          "lens",
+          "Lens Function:",
+          choices = c(
+            "project to x",
+            "project to y",
+            "use eccentricity value",
+            "PCA-1",
+            "PCA-2"
           )
+        )
+      ),
+      mainPanel(
+        plotOutput("filtered_data"),
+        plotOutput("mapper")
       )
-
-    ),
-    mainPanel(plotOutput("filtered_data"),
-              plotOutput("mapper")
-              )
-  )),
-
+    )
+  ),
 
 ## covering and clustering -------------------------------------------------
 
