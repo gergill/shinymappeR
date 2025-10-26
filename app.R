@@ -30,14 +30,12 @@ ui <- navbarPage(
           "Upload CSV dataset:",
           accept = c(".csv", "text/csv", "text/plain")
         ),
-
-        helpText("Upload a two-column CSV file with numeric values (x and y)."),
-
         checkboxInput(
           "header", 
           "CSV has header", 
           TRUE
         ),
+        helpText("Upload a two-column CSV file with numeric values (x and y). If no file is uploaded, an example dataset will be used."),
 
         selectInput(
           "data",
@@ -175,6 +173,7 @@ ui <- navbarPage(
       ),
 
       mainPanel(
+        textOutput("data_source"),
         plotOutput("staggered_data"),
         plotOutput("patch_view"),
         plotOutput("global_view")
@@ -204,6 +203,23 @@ server <- function(input, output, session) {
 
   # data
   data = reactive({
+    # if csv is uploaded
+    if (!is.null(input$upload)) {
+      df <- tryCatch(
+        read.csv(input$upload$datapath, header = input$header),
+        error = function(e) NULL
+      )
+      validate(
+        need(!is.null(df), "Failed to read CSV."),
+        need(ncol(df) == 2, "Error: CSV must contain two columns.")
+      )
+      df <- df[, 1:2]
+      colnames(df) <- c("x", "y")
+      rownames(df) <- seq_len(nrow(df))
+      return(df)
+    }
+
+    # otherwise use example datasets.
     switch(
       input$data,
       "circle" = generate_circle(input$points, input$noise),
@@ -212,6 +228,15 @@ server <- function(input, output, session) {
       "spiral" = generate_spiral(input$points, input$noise),
       "barbell" = generate_barbell(input$points, input$noise)
     )
+  })
+
+  # SOURCE LABEL:
+  output$data_source <- renderText({
+    if (!is.null(input$upload)) {
+      paste("Using uploaded dataset:", input$upload$name)
+    } else {
+      paste("Using built-in dataset:", input$data)
+    }
   })
 
   # run data through lens function
