@@ -167,12 +167,18 @@ ui <- navbarPage(
 )
 # data wrangling and viz creation --------------------------------------
 
-# wrapper function to define logic on the back end
-server <- function(input, output) {
+# SERVER LOGIC
+server <- function(input, output, session) {
 
-  # when patch total changes, update slider values accordingly
-  observeEvent(input$num_patches, {
-    updateSliderInput(inputId = "display_patch", max = input$num_patches)
+  # dynamically update patch slider maximum
+  observe({
+    if (input$cover_method == "Width-Balanced") {
+      updateSliderInput(session, "display_patch", max = input$num_patches)
+    } else if (input$cover_method == "G‑Mapper") {
+      # updated when GMapper cover computed
+      n_cov <- tryCatch(nrow(cover()), error = function(e) 1)
+      updateSliderInput(session, "display_patch", max = n_cov)
+    }
   })
 
   ## data generation and mapper steps ----------------------------------------
@@ -206,23 +212,29 @@ server <- function(input, output) {
     return(res)
   })
 
-  # use mappeR to get a width-balanced cover of our dataset
-  cover = reactive({
-    # grab current data
-    data = data()
+  # COVER GENERATION
+  cover <- reactive({
+    lens <- filtered_data()
 
-    # grab current filter values
-    filtered_data = filtered_data()
-
-    # create 1D width-balanced cover
-    create_width_balanced_cover(
-      min(filtered_data),
-      max(filtered_data),
-      input$num_patches,
-      input$percent_overlap
-    )
+    if (input$cover_method == "Width-Balanced") {
+      create_width_balanced_cover(
+        min(lens),
+        max(lens),
+        input$num_patches,
+        input$percent_overlap
+      )
+    } else {
+      create_gmapper_cover(
+        lens,
+        iterations = input$iterations,
+        max_intervals = input$max_intervals,
+        ad_threshold = input$ad_threshold,
+        g_overlap = input$g_overlap
+      )
+    }
   })
 
+  # CLUSTERERS
   # select global/local cutting height option
   clusterer = reactive({
     data = data()
