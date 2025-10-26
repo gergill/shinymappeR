@@ -24,30 +24,47 @@ make_interval <- function(data, lower, upper, mask = NULL) {
 
 split_interval <- function(interval, data, g_overlap) {
   masked_data <- data[interval$members]
-  meanx <- mean(masked_data)
-  stdx <- sd(masked_data)
-
-  m <- sqrt(2 / pi) * stdx
-  c1 <- meanx + m
-  c2 <- meanx - m
-
-  gmm <- tryCatch(
-    Mclust(masked_data, G = 2, initialization = list(subset = c1, hcPairs = c2)),
-    error = function(e) NULL
-  )
+  if (length(masked_data) < 8) return(NULL)
+  
+  gmm <- tryCatch(Mclust(masked_data, G = 2), error = function(e) NULL)
   if (is.null(gmm)) return(NULL)
-
-  means <- sort(gmm$parameters$mean)
-  sds <- sqrt(gmm$parameters$variance$sigmasq[order(gmm$parameters$mean)])
-
+  
+  means <- as.numeric(gmm$parameters$mean)
+  # ---- variance handling for univariate case ----
+  sigs_raw <- gmm$parameters$variance$sigmasq
+  sigs <- as.numeric(sigs_raw)
+  
+  # if Equal variance model, only one variance -> duplicate it
+  if (length(sigs) == 1) sigs <- rep(sigs, length(means))
+  
+  order_idx <- order(means)
+  means <- means[order_idx]
+  sds   <- sqrt(sigs)[order_idx]
+  
+  cat("Means:", means, "SDs:", sds, "\n")
+  
+  # guard against remaining NAs
+  if (any(is.na(sds)) || any(is.na(means))) {
+    cat("NA detected in GMM parameters, aborting split\n")
+    return(NULL)
+  }
+  
   left_mean <- means[1]; right_mean <- means[2]
-  left_std <- sds[1]; right_std <- sds[2]
-
-  new_upper <- left_mean + (1 + g_overlap) * left_std / (left_std + right_std) * (right_mean - left_mean)
-  new_lower <- right_mean - (1 + g_overlap) * right_std / (left_std + right_std) * (right_mean - left_mean)
-
-  if (new_upper >= interval$upper || new_lower <= interval$lower) return(NULL)
-
+  left_std  <- sds[1];  right_std  <- sds[2]
+  
+  new_upper <- left_mean + (1 + g_overlap) * left_std /
+    (left_std + right_std) * (right_mean - left_mean)
+  new_lower <- right_mean - (1 + g_overlap) * right_std /
+    (left_std + right_std) * (right_mean - left_mean)
+  
+  cat("New lower:", new_lower, "upper:", new_upper, "\n")
+  
+  if (new_upper > (interval$upper - 1e-6) ||
+      new_lower < (interval$lower + 1e-6)) {
+    cat("Rejected due to bounds check\n")
+    return(NULL)
+  }
+  
   list(
     make_interval(data, interval$lower, new_upper, interval$members),
     make_interval(data, new_lower, interval$upper, interval$members)
