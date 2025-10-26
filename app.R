@@ -25,12 +25,29 @@ ui <- navbarPage(
     "Data and Lenses",
     sidebarLayout(
       sidebarPanel(
+        fileInput(
+          "upload", 
+          "Upload CSV dataset:",
+          accept = c(".csv", "text/csv", "text/plain")
+        ),
+
+        helpText("Upload a two-column CSV file with numeric values (x and y)."),
+
+        checkboxInput(
+          "header", 
+          "CSV has header", 
+          TRUE
+        ),
+
         selectInput(
           "data",
-          "Dataset:",
+          "Example Datasets:",
           choices = c("circle", "fading circle", "figure 8", "spiral", "barbell"),
           selected = "circle"
         ),
+
+
+
         sliderInput(
           "points",
           "Number of points:",
