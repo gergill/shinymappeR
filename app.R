@@ -12,6 +12,7 @@ source("dataset_generation.R")
 source("lens_functions.R")
 source("hierarchical_clusterers.R")
 source("plot_dendrograms.R")
+source("gmapper_cover.R")
 
 # user interface ----------------------------------------------------------
 
