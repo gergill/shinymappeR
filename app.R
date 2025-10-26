@@ -167,6 +167,7 @@ ui <- navbarPage(
 )
 # data wrangling and viz creation --------------------------------------
 
+
 # SERVER LOGIC
 server <- function(input, output, session) {
 
@@ -180,6 +181,7 @@ server <- function(input, output, session) {
       updateSliderInput(session, "display_patch", max = n_cov)
     }
   })
+
 
   ## data generation and mapper steps ----------------------------------------
 
@@ -212,6 +214,7 @@ server <- function(input, output, session) {
     return(res)
   })
 
+
   # COVER GENERATION
   cover <- reactive({
     lens <- filtered_data()
@@ -234,6 +237,7 @@ server <- function(input, output, session) {
     }
   })
 
+
   # CLUSTERERS
   # select global/local cutting height option
   clusterer = reactive({
@@ -245,22 +249,18 @@ server <- function(input, output, session) {
       "global" = global_hierarchical_clusterer(input$method, dists)
     )
   })
-  # use mappeR to run Mapper algorithm
-  mapper = reactive({
-    # grab current data
-    data = data()
 
-    # grab current filter values
-    filtered_data = filtered_data()
 
-    # grab current cover
-    cover = cover()
-
-    # grab current clusterer
-    clusterer = clusterer()
-
-    # create mapper graph
-    create_1D_mapper_object(data, dist(data), filtered_data, cover, clusterer)
+  # MAPPER CONSTRUCTION
+  # use mappeR to return mapper object
+  mapper <- reactive({ 
+    create_1D_mapper_object(
+      data(),
+      dist(data()),
+      filtered_data(),
+      cover(),
+      clusterer()
+    )
   })
 
   ## output plots ------------------------------------------------------------
