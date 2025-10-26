@@ -22,6 +22,9 @@
           RColorBrewer
           mclust
           nortest
+          dendextend
+          igraph
+          httpuv
         ];
       };
 
@@ -42,6 +45,11 @@
         buildInputs = with pkgs; [
           rEnv
           texlive
+          pkgs.R
+          pkgs.pkg-config
+          pkgs.zlib.dev
+          pkgs.openssl.dev
+          pkgs.curl.dev
           just
           self.formatter.${system}
         ];
