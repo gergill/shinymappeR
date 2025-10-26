@@ -72,25 +72,72 @@ ui <- navbarPage(
     "Covering and Clustering",
     sidebarLayout(
       sidebarPanel(
-        sliderInput(
-          "num_patches",
-          "Number of patches:",
-          min = 1,
-          max = 20,
-          value = 10
+        ## COVER METHOD SWITCHER
+        selectInput(
+          "cover_method",
+          "Covering Method:",
+          choices = c("Width-Balanced", "G‑Mapper"),
+          selected = "Width-Balanced"
         ),
 
-        sliderInput(
-          "percent_overlap",
-          "Percent overlap:",
-          min = 0,
-          max = 100,
-          value = 25
+        ## WIDTH‑BALANCED PARAMETERS
+        conditionalPanel(
+          condition = "input.cover_method == 'Width-Balanced'",
+          sliderInput(
+            "num_patches",
+            "Number of patches:",
+            min = 1,
+            max = 20,
+            value = 10
+          ),
+          sliderInput(
+            "percent_overlap",
+            "Percent overlap:",
+            min = 0,
+            max = 100,
+            value = 25
+          )
         ),
 
+        ## G‑MAPPER PARAMETERS
+        conditionalPanel(
+          condition = "input.cover_method == 'G‑Mapper'",
+          sliderInput(
+            "iterations",
+            "Max iterations:",
+            min = 1,
+            max = 100,
+            value = 20
+          ),
+          sliderInput(
+            "ad_threshold",
+            "A–D threshold:",
+            min = 0.1,
+            max = 10,
+            value = 0.5,
+            step = 0.1
+          ),
+          sliderInput(
+            "g_overlap",
+            "Gaussian overlap:",
+            min = 0.05,
+            max = 0.9,
+            value = 0.3,
+            step = 0.05
+          ),
+          sliderInput(
+            "max_intervals",
+            "Maximum number of intervals:",
+            min = 5,
+            max = 50,
+            value = 10
+          )
+        ),
+
+        ## COMMON CONTROLS
         sliderInput(
-          inputId = "display_patch",
-          label = "Patch to display: ",
+          "display_patch",
+          "Patch to display:",
           value = 1,
           min = 1,
           max = 2,
@@ -99,22 +146,17 @@ ui <- navbarPage(
 
         selectInput(
           "method",
-          "Linkage method",
-          choices = c("single",
-                      "complete",
-                      "average",
-                      "mcquitty"
-                      )
+          "Linkage method:",
+          choices = c("single", "complete", "average", "mcquitty")
         ),
 
         selectInput(
           "clusterer",
-          "Cutting Height Method",
-          choices = c("global",
-                      "local"
-                      )
-          )
+          "Cutting height method:",
+          choices = c("global", "local")
+        )
       ),
+
       mainPanel(
         plotOutput("staggered_data"),
         plotOutput("patch_view"),
@@ -123,7 +165,6 @@ ui <- navbarPage(
     )
   )
 )
-
 # data wrangling and viz creation --------------------------------------
 
 # wrapper function to define logic on the back end
