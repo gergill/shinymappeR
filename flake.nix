@@ -32,7 +32,11 @@
       };
 
       texlive = pkgs.texlive.combine {
-        inherit (pkgs.texlive) scheme-small collection-latexextra;
+        inherit (pkgs.texlive) 
+          scheme-basic 
+          collection-latexextra
+          biber
+          latexmk;
       };
     in
     {

@@ -1,0 +1,66 @@
+\documentclass[11pt]{amsart}
+
+% Math packages
+\usepackage{amsmath, amsfonts, amssymb}
+\usepackage{mathtools}
+\usepackage{amsthm}
+
+% Bibliography
+\usepackage[style=alphabetic,backend=biber]{biblatex}
+\addbibresource{references.bib}
+
+% Graphics and figures
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{subcaption}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.17}
+
+% Formatting
+\usepackage[margin=1in]{geometry}
+\usepackage{fancyhdr}
+\usepackage{hyperref}
+\usepackage{cleveref}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{import}
+
+% Theorem environments
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{proposition}[theorem]{Proposition}
+
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{example}[theorem]{Example}
+
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+
+% Header and footer
+\pagestyle{plain}
+\title{ShinyMappeR}
+\author{EGIJ}
+\date{\today}
+
+\begin{document}
+
+\begin{abstract}
+\input{./sections/abstract.tex}
+\end{abstract}
+
+\maketitle
+
+\section{Introduction}
+
+\input{./sections/1_introduction.tex}
+\newpage
+
+
+
+\printbibliography
+
+\end{document}
