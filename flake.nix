@@ -25,6 +25,8 @@
           dendextend
           igraph
           httpuv
+          styler
+          lintr
         ];
       };
 
