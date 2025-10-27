@@ -10,8 +10,8 @@ get_agglomerative_dendrogram <- function(dist, method) {
   if (!(inherits(dist, "dist")) & (any(is.na(dist)))) {
     return(vector())
   } else if (!(inherits(dist, "dist"))) {
-    res = list(1)
-    names(res) = dist
+    res <- list(1)
+    names(res) <- dist
     return(res)
   } else {
     return(fastcluster::hclust(dist, method))
@@ -29,10 +29,11 @@ process_dendrograms <- function(dends, cut_heights) {
     return(cutree(dends, h = cut_heights))
   }
 
-  snipped_dends = mapply(cutree,
-                         dends,
-                         h = cut_heights,
-                         SIMPLIFY = FALSE)
+  snipped_dends <- mapply(cutree,
+    dends,
+    h = cut_heights,
+    SIMPLIFY = FALSE
+  )
   return(snipped_dends)
 }
 
@@ -44,16 +45,16 @@ process_dendrograms <- function(dends, cut_heights) {
 #' @return The point just above the merge height with the longest time to the next merge point.
 get_longevity_cut_height <- function(dend, max_height = max(cophenetic(dend))) {
   # TODO remove all the duplicate code lol
-  heights = append(sort(unique(cophenetic(dend))), max_height) # merge heights of dendrogram
+  heights <- append(sort(unique(cophenetic(dend))), max_height) # merge heights of dendrogram
 
-  branch_lengths = diff(heights) # differences are branch lengths
+  branch_lengths <- diff(heights) # differences are branch lengths
 
-  tallest_branch_height = max(branch_lengths)
-  tallest_branch_id = which(branch_lengths == tallest_branch_height)
-  cutval = heights[tallest_branch_id] + .025*tallest_branch_height
+  tallest_branch_height <- max(branch_lengths)
+  tallest_branch_id <- which(branch_lengths == tallest_branch_height)
+  cutval <- heights[tallest_branch_id] + .025 * tallest_branch_height
 
   if (length(cutval) > 1) {
-    cutval = sample(cutval, 1)
+    cutval <- sample(cutval, 1)
   }
 
   return(cutval)
@@ -68,39 +69,40 @@ get_longevity_cut_height <- function(dend, max_height = max(cophenetic(dend))) {
 #' @return A list containing named vectors (one per dendrogram), whose names are data point names and whose values are cluster labels.
 get_hierarchical_clusters <- function(dist_mats, method, cut_height = -1) {
   # do agglomerative clustering on each patch
-  dends = lapply(dist_mats, get_agglomerative_dendrogram, method)
+  dends <- lapply(dist_mats, get_agglomerative_dendrogram, method)
 
   # find heights for each dendrogram
-  max_dists = sapply(dist_mats, max)
+  max_dists <- sapply(dist_mats, max)
 
   # remove trivial heights
-  nonzero_max_dists = max_dists[max_dists != 0]
+  nonzero_max_dists <- max_dists[max_dists != 0]
 
   # we would like to only cut non-trivial dendrograms
-  real_dends = dends[lapply(dends, length) > 1]
-  imposter_dends = dends[lapply(dends, length) == 1]
+  real_dends <- dends[lapply(dends, length) > 1]
+  imposter_dends <- dends[lapply(dends, length) == 1]
 
   # if a global cut height was not supplied, calculate cut heights for each dendrogram
   if (cut_height < 0) {
-    cut_heights = mapply(get_longevity_cut_height, real_dends, max_dists)
+    cut_heights <- mapply(get_longevity_cut_height, real_dends, max_dists)
     # otherwise, use with uniform cut heights
   } else {
-    cut_heights = rep(cut_height, length(max_dists))
+    cut_heights <- rep(cut_height, length(max_dists))
   }
 
   # cut nontrival dendrograms and get cluster assignments
-  processed_dends = process_dendrograms(real_dends, cut_heights)
+  processed_dends <- process_dendrograms(real_dends, cut_heights)
 
   if (typeof(processed_dends) != "list") {
-    names = rownames(processed_dends)
-    processed_dends = list(unlist(as.list(processed_dends)))
-    names(processed_dends[[1]]) = names
+    names <- rownames(processed_dends)
+    processed_dends <- list(unlist(as.list(processed_dends)))
+    names(processed_dends[[1]]) <- names
   }
 
   # combine nontrival and trivial clusterings and return results
   if (length(imposter_dends) != 0) {
-    return(append(processed_dends, sapply(imposter_dends, function(x)
-      list(unlist(x))))) # LMAO what is this
+    return(append(processed_dends, sapply(imposter_dends, function(x) {
+      list(unlist(x))
+    }))) # LMAO what is this
   } else {
     return(processed_dends)
   }
@@ -116,26 +118,26 @@ get_hierarchical_clusters <- function(dist_mats, method, cut_height = -1) {
 #' @export
 #'
 #' @examples
-#' data = data.frame(x = sapply(1:100, function(x) cos(x)), y = sapply(1:100, function(x) sin(x)))
-#' projx = data$x
+#' data <- data.frame(x = sapply(1:100, function(x) cos(x)), y = sapply(1:100, function(x) sin(x)))
+#' projx <- data$x
 #'
-#' dists = dist(data)
+#' dists <- dist(data)
 #'
-#' num_bins = 10
-#' percent_overlap = 25
+#' num_bins <- 10
+#' percent_overlap <- 25
 #'
-#' cover = create_width_balanced_cover(min(projx), max(projx), num_bins, percent_overlap)
+#' cover <- create_width_balanced_cover(min(projx), max(projx), num_bins, percent_overlap)
 #'
 #' create_1D_mapper_object(data, dists, projx, cover, global_hierarchical_clusterer("mcquitty", dists))
 global_hierarchical_clusterer <- function(method, dists) {
   # do hierarchical clustering on entire dataset
-  global_linkage = get_agglomerative_dendrogram(as.dist(dists), method)
+  global_linkage <- get_agglomerative_dendrogram(as.dist(dists), method)
 
   # each dendrogram will be normalized to this height
-  max_dist = max(dists)
+  max_dist <- max(dists)
 
   # this is the cutting height to be used for each dendrogram
-  cut_height = get_longevity_cut_height(global_linkage, max_dist)
+  cut_height <- get_longevity_cut_height(global_linkage, max_dist)
 
   # return clusterer which can accept patches from mapper
   return(function(dist_mats) get_hierarchical_clusters(dist_mats, method, cut_height = cut_height))
@@ -150,15 +152,15 @@ global_hierarchical_clusterer <- function(method, dists) {
 #' @export
 #'
 #' @examples
-#' data = data.frame(x = sapply(1:100, function(x) cos(x)), y = sapply(1:100, function(x) sin(x)))
-#' projx = data$x
+#' data <- data.frame(x = sapply(1:100, function(x) cos(x)), y = sapply(1:100, function(x) sin(x)))
+#' projx <- data$x
 #'
-#' dists = dist(data)
+#' dists <- dist(data)
 #'
-#' num_bins = 10
-#' percent_overlap = 25
+#' num_bins <- 10
+#' percent_overlap <- 25
 #'
-#' cover = create_width_balanced_cover(min(projx), max(projx), num_bins, percent_overlap)
+#' cover <- create_width_balanced_cover(min(projx), max(projx), num_bins, percent_overlap)
 #'
 #' create_1D_mapper_object(data, dists, projx, cover, local_hierarchical_clusterer("mcquitty"))
 local_hierarchical_clusterer <- function(method) {

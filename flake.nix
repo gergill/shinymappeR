@@ -5,7 +5,8 @@
     nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
   };
 
-  outputs = { self, nixpkgs, ... }:
+  outputs =
+    { self, nixpkgs, ... }:
     let
       system = "x86_64-linux";
       pkgs = nixpkgs.legacyPackages.${system};
@@ -33,7 +34,8 @@
       texlive = pkgs.texlive.combine {
         inherit (pkgs.texlive) scheme-small collection-latexextra;
       };
-    in {
+    in
+    {
       formatter.${system} = pkgs.nixfmt-rfc-style;
 
       devShells.${system}.default = pkgs.mkShell {
