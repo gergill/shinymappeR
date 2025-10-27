@@ -59,6 +59,7 @@
           pkgs.openssl.dev
           pkgs.curl.dev
           just
+          watchexec
           self.formatter.${system}
         ];
 

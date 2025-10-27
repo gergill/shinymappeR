@@ -6,6 +6,16 @@ default:
 build:
     cd paper && latexmk
 
+# Rebuild paper when .tex or bib files change
+write:
+    @echo "Watching paper/ for changes..."
+    watchexec \
+        --exts tex,bib,sty,cls \
+        --watch paper \
+        --restart \
+        --clear \
+        -- just build
+
 # Clean build artifacts
 clean:
     cd paper && latexmk -c
