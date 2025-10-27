@@ -1,1 +1,36 @@
-This is the introduction.
+The Mapper algorithm has become a popular tool in Topological Data Analysis 
+(TDA) since its invention by Singh, et al. in \cite{Singh2007}. Mapper takes 
+as input a dataset and outputs a simplicial complex. The raw input, 
+interpreted as a point-cloud, lacks any meaningful topological structure. 
+The resulting simplicial complex (mapper-complex) is an approximation 
+for the topology of the underlying space from which the data may have been 
+sampled.
+
+Mapper is not unique in this regard. There are many simplicial-complex 
+constructions in TDA which accomplish this (Vietoris-Rips complexes, 
+Alpha complexes, etc.). However the main benefit (and curse) of mapper is 
+the wide-variety of hyperparameters involved in its construction. A 
+principled and informed application of Mapper can reveal interesting 
+structures and analysis from one's data. However, it has been shown in 
+\cite{alvarado2024graphmappergraph} that given any sufficiently large 
+dataset and graph $G$ there is a choice of hyperparameters for which mapper's 
+output is isomorphic to $G$. So an unprincipled approach can very well 
+yield misleading conclusions.
+
+There are as of yet no educational tools for the Mapper algorithm which 
+are interactive and encourage a principled approach to the mapper algorithm.
+ShinyMappeR is a software which aims to fill this gap for educators, students, 
+and practitioners. ShinyMappeR is written in R as a shinyApp and can be used 
+in the browser. ShinyMappeR gives visual feedback and provides example 
+datasets which showcase some common issues that may arise in parameter selection 
+for the mapper algorithm. ShinyMappeR uses the MappeR implementation of the 
+mapper algorithm and is extensible to demonstrate new research methods. 
+For example: G-Mapper comes equipped as a covering scheme option and allows for live 
+feedback for how changing hyperparameters impacts every aspect of the mapper 
+graph construction.
+
+We now outline the rest of this paper. Section 2 continues with a detailed
+description of the mapper algorithm and its motivations. Section 3 gives a 
+breakdown of the features of shinyMappeR software. Section 4 goes over common 
+traps when implementing mapper and how shinymapper example datasets can teach 
+these. And section 5 outlines extensiblity for new research techniques.

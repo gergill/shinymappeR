@@ -1,0 +1,89 @@
+The standard Mapper algorithm takes as input a dataset $D$ and a set of 
+user-specified hyperparameters:
+
+\begin{itemize}
+  \item \textbf{Filter (or lens) function.} 
+  A mapping $f: D \to B$ that projects the data from the original space 
+  into a base space $B$. This function often performs dimensionality reduction.
+  Common choices include coordinate projection, principal component analysis (PCA),
+  and UMAP.
+
+  \item \textbf{Covering scheme.} 
+  A cover $\mathcal{C}$ of the base space $B$, such as a width-balanced 
+  cubical cover, which defines overlapping regions over which clustering is applied.
+
+  \item \textbf{Clustering method.}
+  A clustering algorithm that groups points in $D$ corresponding to each 
+  element of the cover.
+\end{itemize}
+
+Each hyperparameter may itself depend on additional (implicit) parameters. 
+For instance, the DBSCAN clustering method has parameters $\text{MinPts}$ and 
+$\epsilon$, while the width-balanced cubical covering scheme depends on the 
+number of cover elements and the percent overlap. The choice of these 
+implicit parameters can significantly influence the resulting Mapper complex.
+
+\begin{definition}[Hyperparameter Space $\mathcal{H}$]
+Let the Mapper algorithm be defined by three primary hyperparameters:
+a filter function $f$, a covering scheme $\mathcal{C}$, and a clustering method.
+Each of these hyperparameters may depend on one or more implicit parameters 
+that control their behavior. 
+
+We define the \emph{hyperparameter space} $\mathcal{H}$ as the Cartesian product 
+of all implicit parameter domains associated with the chosen hyperparameters.
+Formally, if 
+$$
+  \Theta_f, \ \Theta_{\mathcal{C}}, \ \Theta_{\text{cluster}}
+$$
+denote the parameter spaces corresponding to the filter, cover, and clustering 
+methods respectively, then
+$$
+  \mathcal{H} = \Theta_f \times \Theta_{\mathcal{C}} \times \Theta_{\text{cluster}}.
+$$
+
+As an example, if we choose:
+\begin{itemize}
+  \item projection onto the first coordinate as the filter function, 
+  \item a width-balanced cubical cover as the covering scheme, and 
+  \item DBSCAN as the clustering method,
+\end{itemize}
+then the implicit parameters are $\text{MinPts}$, $\epsilon$, 
+$\text{num\_elements}$, and $\text{percent\_overlap}$. The corresponding 
+hyperparameter space is
+$$
+  \mathcal{H} = \mathbb{N} \times \mathbb{R}^{>0} \times \mathbb{N} \times (0,1).
+$$
+Where if we used PCA instead of projection onto the first coordinate as our 
+filter function, then $\mathcal{H}$ would have an additional component $\mathbb{N}$ 
+corresponding to the number of components (dimension) PCA maps to.
+\end{definition}
+
+\begin{definition}[The Mapper Algorithm]
+Given an input point cloud $D$, the Mapper algorithm associates each point in the 
+hyperparameter space $\mathcal{H}$ with a simplicial complex:
+
+$$
+  \text{Mapper}(D): \mathcal{H} \rightarrow \text{SC}
+$$
+
+For a fixed choice of parameters in $\mathcal{H}$, the algorithm proceeds as follows:
+\begin{enumerate}
+  \item Apply the filter function $f$ to obtain $f[D] \subseteq B$.
+  \item Apply the covering scheme to $f[D]$ to produce a collection of regions 
+  $\{ \mathcal{C}_i \} \subseteq B$.
+  \item For each region $\mathcal{C}_i$, cluster the corresponding preimage 
+  $f^{-1}[\mathcal{C}_i]$, obtaining clusters $V = \{ C_{i,j} \}$.
+  \item Construct a simplicial complex where each cluster $C_{i,j}$ corresponds 
+  to a vertex, and simplices are formed between vertices whose corresponding clusters 
+  intersect non-trivially.
+\end{enumerate}
+The resulting simplicial complex is called the \emph{Mapper complex} of $D$.
+\end{definition}
+
+\begin{remark}
+  While mapper can be defined to construct a simplicial complex it is typically 
+  restricted to only computing the 1-skeleton of the true mapper-complex. In 
+  this case the output is interchangably called the \emph{Mapper graph}.
+\end{remark}
+
+\subsection{Motivations}
