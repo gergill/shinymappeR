@@ -17,7 +17,7 @@ alias fmt := format
 
 # Format all the code
 format:
-    Rscript -e "styler::style_dir('R')"
+    Rscript -e "styler::style_dir('.')"
     Rscript -e "styler::style_dir('tests')"
     nix fmt flake.nix
     just --unstable --fmt
