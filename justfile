@@ -17,15 +17,15 @@ alias fmt := format
 
 # Format all the code
 format:
-    Rscript -e "styler::style_dir('.')"
-    Rscript -e "styler::style_dir('tests')"
+    Rscript -e "styler::style_dir('.', exclude_files = c('^.direnv', '^paper', '^rsconnect', '^tests'), recursive = TRUE)"
+    Rscript -e "if (dir.exists('tests')) styler::style_dir('tests') else cat('No tests/ directory found\n')"
     nix fmt flake.nix
     just --unstable --fmt
 
 # Lint R code
 lint:
-    Rscript -e "lintr::lint_dir('R')"
-    Rscript -e "lintr::lint_dir('tests')"
+    Rscript -e "lintr::lint_dir('.', exclusions = c('.direnv', 'paper', 'rsconnect', 'tests'))"
+    Rscript -e "if (dir.exists('tests')) lintr::lint_dir('tests') else cat('No tests/ directory found\n')"
 
 # Start shinymapper app
 app:
