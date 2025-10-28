@@ -1,0 +1,60 @@
+While the Reeb graph construction is the original conceptual foundation for the Mapper 
+algorithm, much of the Mapper construction's theoretical and geometric intuition 
+can be derived from \emph{Leray’s Nerve Theorem}. In particular, Mapper can be viewed 
+as an attempt to reconstruct, from sampled data, a good cover whose nerve 
+approximates the underlying manifold $X$. Each choice of lens function, cover, 
+and clustering method defines how this discrete cover is built. And since 
+the cover is assumed to be \emph{good} the choices of hyperparameters induce priors on the 
+connectivity structure for the underlying manifold mapper approximates.
+
+The lens function $f : D \rightarrow B$ determines how the dataset is projected 
+into a base space $B$, effectively specifying the perspective through which 
+the topology of $X$ is observed. Depending on the choice of $f$
+the same dataset $D$ can produce Mapper complexes highlighting different features 
+of $X$. Intuitively, $f$ defines which directions in data space reveal relevant 
+geometric or functional variation. A well-chosen filter preserves separations 
+inherent to $X$, while a poorly chosen one may cause topologically distinct 
+regions to overlap in $B$, introducing artificial simplicies in the resulting Mapper 
+complex.
+
+$$\text{[include dataset example]}$$
+
+The covering scheme $\mathcal{C}$ on the image $f[D]$ controls both 
+the resolution of the topological reconstruction. Generally speaking, a coarse cover 
+with few overlapping intervals yields a low-resolution summary that can smooth 
+out smaller-scale structures, while a fine cover with high overlap can expose more 
+localized features but increases sensitivity to the sampling noise. 
+Through the preimages $f^{-1}(U_i)$, the cover induces a family of overlapping 
+subsets of $D$, forming what we call the \emph{cluster cover} of $X$. G-Mapper 
+demonstrates this by adaptively refining the cover in certain regions assuming 
+noise is normally distributed.
+
+$$\text{[include example]}$$
+
+The clustering method serves as a discrete approximation to 
+path-connected components within each preimage $f^{-1}(U_i)$. This choice 
+directly influences how Mapper interprets local connectivity: 
+density-based algorithms such as DBSCAN, HDBSCAN, or single-linkage clustering 
+tend to approximate topological connectedness by grouping dense or chain-connected 
+regions, while partitional methods such as $K$-Means impose a fixed number of 
+clusters per region. The latter approach introduces strong geometric assumptions 
+(e.g., roughly convex clusters), which may guarantee that each cluster is 
+contractible (helpful for forming a \emph{good cover}) but potentially deviate from 
+the manifold’s true topology. Density-based methods, while more faithful to the 
+notion of connected components from the Reeb construction, can still fail to yield a good cover due to 
+the chaining effect introducing non-contractible intersections between clusters,
+or suffer from increased sensitivity to noise and scale. 
+
+$$\text{[include example]}$$
+
+\subsection{Parameter Selection}
+The triple $(f, \mathcal{C}, \text{cluster})$ defines a discrete 
+approximation to the topology of $X$ from a sampling $D$. If the cluster cover forms a \emph{good} cover, then 
+the Mapper complex is homotopy equivalent to $X$. In practice, this equivalence 
+is approximate: the extent to which Mapper recovers the true topology depends 
+on how the lens function partitions the data, how the cover refines the image, 
+and how the clustering algorithm captures local connectivity. Consequently, 
+the Mapper construction can be viewed as exploring a family of topological 
+summaries parameterized by the hyperparameter space $\mathcal{H}$, where each 
+choice of parameters provides a different resolution and perspective on the 
+shape of the underlying space $X$. Typically this does not yield a filtration...

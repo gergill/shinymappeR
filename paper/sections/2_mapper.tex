@@ -1,4 +1,5 @@
-The standard Mapper algorithm takes as input a dataset $D$ and a set of 
+We briefly review the standard mapper algorithm and its relation to the Reeb 
+graph. Mapper takes as input a finite point cloud dataset $D$ and a set of 
 user-specified hyperparameters:
 
 \begin{itemize}
@@ -72,18 +73,76 @@ For a fixed choice of parameters in $\mathcal{H}$, the algorithm proceeds as fol
   \item Apply the covering scheme to $f[D]$ to produce a collection of regions 
   $\{ \mathcal{C}_i \} \subseteq B$.
   \item For each region $\mathcal{C}_i$, cluster the corresponding preimage 
-  $f^{-1}[\mathcal{C}_i]$, obtaining clusters $V = \{ C_{i,j} \}$.
+  $f^{-1}[\mathcal{C}_i]$ to obtain clusters $V = \{ C_{i,j} \}$.
   \item Construct a simplicial complex where each cluster $C_{i,j}$ corresponds 
   to a vertex, and simplices are formed between vertices whose corresponding clusters 
-  intersect non-trivially.
+  have non-empty intersection.
 \end{enumerate}
 The resulting simplicial complex is called the \emph{Mapper complex} of $D$.
 \end{definition}
 
 \begin{remark}
-  While mapper can be defined to construct a simplicial complex it is typically 
-  restricted to only computing the 1-skeleton of the true mapper-complex. In 
-  this case the output is interchangably called the \emph{Mapper graph}.
+  Although the Mapper algorithm naturally defines a simplicial complex, 
+  in practice the construction is often restricted to only computing the 
+  1-skeleton. In this case the output may be referred to as the \emph{Mapper graph}.
 \end{remark}
 
 \subsection{Motivations}
+
+The Mapper algorithm originates as a discrete analogue of the \emph{Reeb graph} 
+from Morse theory. The Reeb graph provides a way to compress/express the topology 
+of a manifold through the lens of a scalar-valued function.
+
+\begin{definition}[Reeb Graph]
+Let $X$ be a topological space and $f : X \to \mathbb{R}$ a continuous scalar function. 
+Define an equivalence relation on $X$ where $x \sim y$ if and only if 
+$f(x) = f(y)$ and $x$ and $y$ belong to the same connected component of the 
+level set $f^{-1}(f(x))$. The \emph{Reeb graph} $R_f$ is the quotient space 
+$X / \!\sim$ equipped with the quotient topology. Each point in $R_f$ represents 
+a connected component of some level set, and $R_f$ inherits a natural structure 
+as a one-dimensional CW complex where vertices (which correspond to critical points of $f$) 
+encode how connected components split and merge as the function value 
+$\lambda$ varies over $\mathbb{R}$.
+\end{definition}
+
+The Reeb graph provides a topological summary of $X$ through the lens of $f$: 
+it preserves the number of connected components and retains some information 
+about one-dimensional holes while ignoring higher-dimensional features. However, 
+computing Reeb graphs requires a continuous space $X$. Mapper was introduced 
+to extend the Reeb graph to the discrete setting of a sampling from the space $X$.
+
+The Reeb graph construction operates on connected components of 
+\emph{level sets} of $f$: preimages $f^{-1}(\lambda)$ of individual function 
+values. Mapper replaces these level sets with open sets of the base space $B$,
+and uses a clustering method as a proxy for finding connected components.
+
+Formally, suppose our dataset $D$ is sampled from some topological space $X$. 
+Given a lens function $f: D \rightarrow B$ and an open cover 
+$\{ U_i \}_{i \in I}$ of $f[D] \subseteq B$, we consider the family of \emph{patches}
+$f^{-1}(U_i) \subset X$. We would like to replace each patch with its 
+connected components. Since we are dealing with discrete data there 
+is no notion of connectivity so we must invoke a clustering method 
+to determine which datapoint samples belong in the same connected component. 
+We replace each patch by it's set of clusters. The combinatorial 
+nerve of the set of patch clusters is the resulting mapper graph.
+
+If some conditions are met (e.g., if $f$ is 
+well-behaved, the cover and sampling are sufficiently fine, and the clustering 
+method is accurate to connected components) then this nerve is isomorphic to the Reeb 
+graph $R_f$.
+
+A theoretical justification for this construction also follows from a classical result 
+in algebraic topology: 
+
+\begin{definition}[Leray's Nerve Theorem]
+Let $\mathcal{U} = \{ U_i \}_{i \in I}$ be a cover of a topological space $X$, 
+and let $N(\mathcal{U})$ denote the \emph{nerve} of $\mathcal{U}$: the simplicial complex 
+whose vertices are indexed by the sets in $\mathcal{U}$, and whose simplices correspond 
+to nonempty finite intersections of the cover sets. If $\mathcal{U}$ is a \emph{good cover} 
+(that is, if every nonempty finite intersection of sets in $\mathcal{U}$ is contractible), 
+then the nerve $N(\mathcal{U})$ is homotopy equivalent to $X$.
+\end{definition}
+
+Consequently, if the set of clusters from each preimage provide a good cover 
+of the sampled manifold, then the Mapper complex obtained from $D$ will approximate 
+the topology of $X$. 
