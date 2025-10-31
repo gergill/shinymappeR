@@ -14,13 +14,14 @@ source("hierarchical_clusterers.R")
 source("plot_dendrograms.R")
 source("gmapper_cover.R")
 
-# user interface ----------------------------------------------------------
+# ------------------------------------------------------------------
+# USER INTERFACE
+# ------------------------------------------------------------------
 
 ui <- navbarPage(
   "1D Mapper",
 
-  ## data and lenses --------------------------------------------------------
-
+  # --- DATA AND LENSES TAB -----------------------------------------
   tabPanel(
     "Data and Lenses",
     sidebarLayout(
@@ -30,34 +31,22 @@ ui <- navbarPage(
           "Upload CSV dataset:",
           accept = c(".csv", "text/csv", "text/plain")
         ),
-        checkboxInput(
-          "header",
-          "CSV has header",
-          TRUE
+        checkboxInput("header", "CSV has header", TRUE),
+        helpText(
+          "Upload a two-column CSV file (x and y). ",
+          "If no file is uploaded, a built-in dataset generator is used."
         ),
-        helpText("Upload a two-column CSV file with numeric values (x and y). If no file is uploaded, an example dataset will be used."),
+
         selectInput(
           "data",
-          "Example Datasets:",
-          choices = c("circle", "fading circle", "figure 8", "spiral", "barbell"),
+          "Example Dataset:",
+          choices = names(dataset_registry), # to add a choice: go to dataset_generation.R
           selected = "circle"
         ),
-        sliderInput(
-          "points",
-          "Number of points:",
-          min = 100,
-          max = 2000,
-          value = 1000,
-          step = 100
-        ),
-        sliderInput(
-          "noise",
-          "Noise:",
-          min = 0,
-          max = 1,
-          value = 0.1,
-          step = 0.01
-        ),
+
+        # dynamic dataset parameter controls produced from generator
+        uiOutput("dynamic_dataset_ui"),
+
         selectInput(
           "lens",
           "Lens Function:",
@@ -77,13 +66,11 @@ ui <- navbarPage(
     )
   ),
 
-  ## covering and clustering -------------------------------------------------
-
+  # --- COVERING AND CLUSTERING TAB ----------------------------------
   tabPanel(
     "Covering and Clustering",
     sidebarLayout(
       sidebarPanel(
-        ## COVER METHOD SWITCHER
         selectInput(
           "cover_method",
           "Covering Method:",
@@ -91,68 +78,46 @@ ui <- navbarPage(
           selected = "Width-Balanced"
         ),
 
-        ## WIDTH‑BALANCED PARAMETERS
+        # Width‑Balanced Parameters
         conditionalPanel(
           condition = "input.cover_method == 'Width-Balanced'",
           sliderInput(
             "num_patches",
             "Number of patches:",
-            min = 1,
-            max = 20,
-            value = 10
+            min = 1, max = 20, value = 10
           ),
           sliderInput(
             "percent_overlap",
             "Percent overlap:",
-            min = 0,
-            max = 100,
-            value = 25
+            min = 0, max = 100, value = 25
           )
         ),
 
-        ## G‑MAPPER PARAMETERS
+        # G‑Mapper Parameters
         conditionalPanel(
           condition = "input.cover_method == 'G‑Mapper'",
           sliderInput(
-            "iterations",
-            "Max iterations:",
-            min = 1,
-            max = 100,
-            value = 20
+            "iterations", "Max iterations:", min = 1, max = 100, value = 20
           ),
           sliderInput(
-            "ad_threshold",
-            "A–D threshold:",
-            min = 0.1,
-            max = 10,
-            value = 0.5,
-            step = 0.1
+            "ad_threshold", "A–D threshold:",
+            min = 0.1, max = 10, value = 0.5, step = 0.1
           ),
           sliderInput(
-            "g_overlap",
-            "Gaussian overlap:",
-            min = 0.05,
-            max = 0.9,
-            value = 0.3,
-            step = 0.05
+            "g_overlap", "Gaussian overlap:",
+            min = 0.05, max = 0.9, value = 0.3, step = 0.05
           ),
           sliderInput(
-            "max_intervals",
-            "Maximum number of intervals:",
-            min = 5,
-            max = 50,
-            value = 10
+            "max_intervals", "Maximum number of intervals:",
+            min = 5, max = 50, value = 10
           )
         ),
 
-        ## COMMON CONTROLS
+        hr(),
         sliderInput(
           "display_patch",
           "Patch to display:",
-          value = 1,
-          min = 1,
-          max = 2,
-          step = 1
+          value = 1, min = 1, max = 2, step = 1
         ),
         selectInput(
           "method",
@@ -174,28 +139,36 @@ ui <- navbarPage(
     )
   )
 )
-# data wrangling and viz creation --------------------------------------
 
-
+# ------------------------------------------------------------------
 # SERVER LOGIC
+# ------------------------------------------------------------------
+
 server <- function(input, output, session) {
-  # dynamically update patch slider maximum
+
+  # dynamically update patch slider maximum when the cover method changes
   observe({
     if (input$cover_method == "Width-Balanced") {
       updateSliderInput(session, "display_patch", max = input$num_patches)
     } else if (input$cover_method == "G‑Mapper") {
-      # updated when GMapper cover computed
       n_cov <- tryCatch(nrow(cover()), error = function(e) 1)
       updateSliderInput(session, "display_patch", max = n_cov)
     }
   })
 
+  # --- dynamic dataset parameter UI ---------------------------------
+  observeEvent(input$data, {
+    generator <- get_generator(input$data)
+    output$dynamic_dataset_ui <- renderUI({
+      generator$get_ui()  # produce list of sliders for dataset params
+    })
+  })
 
-  ## data generation and mapper steps ----------------------------------------
+  # --- DATA REACTIVE ------------------------------------------------
 
-  # data
+  # TODO: Add a clear CSV btn so people don't have to reload the application
   data <- reactive({
-    # if csv is uploaded
+    # Case 1: Uploaded CSV
     if (!is.null(input$upload)) {
       df <- tryCatch(
         read.csv(input$upload$datapath, header = input$header),
@@ -203,7 +176,7 @@ server <- function(input, output, session) {
       )
       validate(
         need(!is.null(df), "Failed to read CSV."),
-        need(ncol(df) == 2, "Error: CSV must contain two columns.")
+        need(ncol(df) == 2, "CSV must contain exactly two numeric columns.")
       )
       df <- df[, 1:2]
       colnames(df) <- c("x", "y")
@@ -211,17 +184,17 @@ server <- function(input, output, session) {
       return(df)
     }
 
-    # otherwise use example datasets.
-    switch(input$data,
-      "circle" = generate_circle(input$points, input$noise),
-      "fading circle" = generate_fading_circle(input$points, input$noise),
-      "figure 8" = generate_figure_eight(input$points, input$noise),
-      "spiral" = generate_spiral(input$points, input$noise),
-      "barbell" = generate_barbell(input$points, input$noise)
-    )
+    # Case 2: Generated dataset from DatasetGenerator class
+    gen <- get_generator(input$data)
+
+    param_names <- names(gen$param_spec)
+    params <- lapply(param_names, function(p) input[[p]])
+    names(params) <- param_names
+
+    gen$generate(params)
   })
 
-  # SOURCE LABEL:
+  # --- DATA SOURCE ---------------------------------------------
   output$data_source <- renderText({
     if (!is.null(input$upload)) {
       paste("Using uploaded dataset:", input$upload$name)
@@ -230,11 +203,9 @@ server <- function(input, output, session) {
     }
   })
 
-  # run data through lens function
+  # --- FILTERED DATA -----------------------------------------
   filtered_data <- reactive({
-    # grab current data
     data <- data()
-
     res <- switch(input$lens,
       "project to x" = data$x,
       "project to y" = data$y,
@@ -243,20 +214,16 @@ server <- function(input, output, session) {
       "PCA-2" = prcomp(data, center = FALSE, scale. = FALSE)$x[, 2]
     )
     names(res) <- row.names(data)
-    return(res)
+    res
   })
 
-
-  # COVER GENERATION
+  # --- COVER GENERATION ---------------------------------------------
   cover <- reactive({
     lens <- filtered_data()
-
     if (input$cover_method == "Width-Balanced") {
       create_width_balanced_cover(
-        min(lens),
-        max(lens),
-        input$num_patches,
-        input$percent_overlap
+        min(lens), max(lens),
+        input$num_patches, input$percent_overlap
       )
     } else {
       create_gmapper_cover(
@@ -269,9 +236,7 @@ server <- function(input, output, session) {
     }
   })
 
-
-  # CLUSTERERS
-  # select global/local cutting height option
+  # --- CLUSTERER ----------------------------------------------------
   clusterer <- reactive({
     data <- data()
     dists <- dist(data)
@@ -281,9 +246,7 @@ server <- function(input, output, session) {
     )
   })
 
-
-  # MAPPER CONSTRUCTION
-  # use mappeR to return mapper object
+  # --- MAPPER CONSTRUCTION ------------------------------------------
   mapper <- reactive({
     create_1D_mapper_object(
       data(),
@@ -294,226 +257,133 @@ server <- function(input, output, session) {
     )
   })
 
-  ## output plots ------------------------------------------------------------
-
-  # output plot of filtered data with colored datapoints
+  # --- PLOTS --------------------------------------------------------
   output$filtered_data <- renderPlot({
-    # grab data and filtered data
     data <- data()
-    filtered_data <- filtered_data()
-
-    # create a vector of colors according to lens function
-    col <- color_gradient(50)[as.numeric(cut(filtered_data, breaks = 50))]
-
-    # plot data with appropriate coloring
-    plot(
-      data,
-      pch = 20,
-      axes = FALSE,
-      xlab = "",
-      ylab = "",
-      col = col,
-      asp = 1
-    )
+    filtered <- filtered_data()
+    col <- color_gradient(50)[as.numeric(cut(filtered, breaks = 50))]
+    plot(data, pch = 20, axes = FALSE, col = col, asp = 1,
+         xlab = "", ylab = "")
   })
 
-  # output plot of patch clustering and dendrogram
-  output$patch_view <- renderPlot({
-    # we will need these values for patch and dendrogram visualization
-    data <- data()
-    global_dists <- dist(data)
-    mapper <- mapper()
-    vertices <- mapper[[1]]
-
-    this_patch <- vertices[vertices$patch == input$display_patch, ] # get vertices of mapper graph in patch
-    this_patch_data <- this_patch[, "data"] # grab data names from patch
-    this_patch_names <- unlist(strsplit(this_patch_data, ",")) # convert name strings into vector of names
-    rows <- as.numeric(this_patch_names) # names are chars so this works
-    datasub <- data[rows, ] # get actual datapoints in patch
-
-    patch_dists <- dist(datasub) # get distance matrix for patch data
-
-    patch_dend <- hclust(patch_dists, input$method) # hierarchical clustering on the patch
-    global_dend <- hclust(global_dists, input$method) # hierarchical clustering on the whole dataset
-
-    global_cut_height <- get_longevity_cut_height(global_dend, max(global_dists)) # best cut height for global dendrogram
-    patch_cut_height <- global_cut_height # default patch cut value is same as global
-
-    if (input$clusterer == "local") {
-      patch_cut_height <- get_longevity_cut_height(patch_dend, max(patch_dists)) # individually find cut height if appropriate
-    }
-
-    par(mfrow = c(1, 2)) # we want one row, two columns for the plot
-
-    clusters <- cutree(patch_dend, h = patch_cut_height) # cut the patch dendrogram to find cluster assignment
-    num_clusts <- length(unique(clusters)) # find number of clusters
-    cols <- brewer.pal(num_clusts, "Dark2") # make as many colors as there are clusters
-    data_cols <- sapply(clusters, function(x) cols[x]) # assign colors to data points by cluster
-
-    # plot data with appropriate coloring
-    plot(
-      datasub,
-      pch = 20,
-      axes = FALSE,
-      xlab = "",
-      ylab = "",
-      col = data_cols,
-      asp = 1
-    )
-
-    # dendrogram scale will differ depending on local/global clustering choice
-
-    if (input$clusterer == "local") {
-      plot_dendrogram(
-        patch_dend,
-        input$method,
-        max(patch_dists), # dendrogram only goes as far as the maximum pairwise distance in the patch
-        patch_cut_height,
-        paste("Patch", input$display_patch),
-        paste("Linkage:", input$method)
-      )
-    } else {
-      plot_dendrogram(
-        patch_dend,
-        input$method,
-        max(global_dists), # dendrogram goes all the way to the global maximum pairwise distance
-        patch_cut_height,
-        paste("Patch", input$display_patch),
-        paste("Linkage:", input$method)
-      )
-    }
-  })
-
-  # output plot of global dataset clustering and dendrogram
-  output$global_view <- renderPlot({
-    data <- data()
-    global_dists <- dist(data)
-
-    global_dend <- hclust(global_dists, input$method) # hierarchical clustering
-    global_cut_height <- get_longevity_cut_height(global_dend, max(global_dists))
-
-    par(mfrow = c(1, 2))
-
-    clusters <- cutree(global_dend, h = global_cut_height)
-    num_clusts <- length(unique(clusters))
-    cols <- brewer.pal(num_clusts, "Dark2")
-    data_cols <- sapply(clusters, function(x) cols[x])
-
-    # plot entire dataset with coloring via clusters
-    plot(
-      data,
-      pch = 20,
-      axes = FALSE,
-      xlab = "",
-      ylab = "",
-      col = data_cols,
-      asp = 1
-    )
-
-    plot_dendrogram(
-      global_dend,
-      input$method,
-      max(global_dists),
-      global_cut_height,
-      "All Data",
-      paste("Linkage:", input$method)
-    )
-  })
-
-  # output plot of mapper graph
   output$mapper <- renderPlot({
-    # plot igraph object obtained from mappeR
     plot(mapper_to_igraph(mapper()))
   })
 
-  # plot of data with overlaid patches
   output$staggered_data <- renderPlot({
     data <- data()
-    cover <- cover()
+    cov <- cover()
 
-    # plot data
-    plot(data,
+    # basic scatter
+    plot(
+      data,
       xlim = c(min(data$x), max(data$x)),
       pch = 20,
       asp = 1
     )
 
-    # plot overlaying patches depending on lens (and cover)
     if (input$lens == "project to x") {
-      rect(cover[, 1],
-        min(data$y),
-        cover[, 2],
-        max(data$y),
+      rect(cov[, 1], min(data$y), cov[, 2], max(data$y),
         col = color_gradient(input$num_patches, .5)
       )
+
     } else if (input$lens == "project to y") {
-      rect(min(data$x),
-        cover[, 2],
-        max(data$x),
-        cover[, 1],
+      rect(min(data$x), cov[, 2], max(data$x), cov[, 1],
         col = color_gradient(input$num_patches, .5)
       )
-    } else if (input$lens == "PCA-1") { # this code for PCA rectangles from Jacob Miller
-      # draw PCA line
+
+    } else if (input$lens == "PCA-1" || input$lens == "PCA-2") {
+      pc_index <- ifelse(input$lens == "PCA-1", 1, 2)
       pca_output <- prcomp(data, center = FALSE, scale. = FALSE)
-      pca_vector <- pca_output$rotation[, 1]
+      pca_vector <- pca_output$rotation[, pc_index]
       slope <- pca_vector[2] / pca_vector[1]
+
+      # draw PCA line
       abline(0, slope, col = "green", lwd = 3, lty = 3)
 
-      # calculate perpendicular vector
+      # compute perpendicular
       perp_vector <- c(-pca_vector[2], pca_vector[1])
-      perp_vector <- perp_vector / sqrt(sum(perp_vector^2)) # normalize
+      perp_vector <- perp_vector / sqrt(sum(perp_vector^2))
 
-      # color (super annoying) bins using a loop since polygon
-      for (i in 1:nrow(cover)) {
-        # calculate cut points for bins on the pca line
-        cut1 <- cover[i, 1] * pca_vector
-        cut2 <- cover[i, 2] * pca_vector
-        # the 100 is just to make sure the bins don't get cutoff in the image
+      # draw cover polygons along PCA direction
+      for (i in seq_len(nrow(cov))) {
+        cut1 <- cov[i, 1] * pca_vector
+        cut2 <- cov[i, 2] * pca_vector
+
         corner1 <- cut1 + 100 * perp_vector
         corner2 <- cut1 - 100 * perp_vector
         corner3 <- cut2 - 100 * perp_vector
         corner4 <- cut2 + 100 * perp_vector
 
-        # Draw filled rectangle using polygon since rect didn't work :((
         polygon(
           x = c(corner1[1], corner2[1], corner3[1], corner4[1]),
           y = c(corner1[2], corner2[2], corner3[2], corner4[2]),
-          col = color_gradient(input$num_patches, .5)[i]
-        )
-      }
-    } else if (input$lens == "PCA-2") { # also from Jacob Miller
-      # draw PCA line
-      pca_output <- prcomp(data, center = FALSE, scale. = FALSE)
-      pca_vector <- pca_output$rotation[, 2]
-      slope <- pca_vector[2] / pca_vector[1]
-      abline(0, slope, col = "green", lwd = 3, lty = 3)
-
-      # calculate perpendicular vector
-      perp_vector <- c(-pca_vector[2], pca_vector[1])
-      perp_vector <- perp_vector / sqrt(sum(perp_vector^2)) # normalize
-
-      # color (super annoying) bins using a loop since polygon
-      for (i in 1:nrow(cover)) {
-        # calculate cut points for bins on the pca line
-        cut1 <- cover[i, 1] * pca_vector
-        cut2 <- cover[i, 2] * pca_vector
-        # the 100 is just to make sure the bins don't get cutoff in the image
-        corner1 <- cut1 + 100 * perp_vector
-        corner2 <- cut1 - 100 * perp_vector
-        corner3 <- cut2 - 100 * perp_vector
-        corner4 <- cut2 + 100 * perp_vector
-
-        # Draw filled rectangle using polygon since rect didn't work :((
-        polygon(
-          x = c(corner1[1], corner2[1], corner3[1], corner4[1]),
-          y = c(corner1[2], corner2[2], corner3[2], corner4[2]),
-          col = color_gradient(input$num_patches, .5)[i]
+          col = color_gradient(nrow(cov), .5)[i],
+          border = NA
         )
       }
     }
   })
+
+  output$patch_view <- renderPlot({
+    data <- data()
+    mapper_obj <- mapper()
+    vertices <- mapper_obj[[1]]
+    global_dists <- dist(data)
+
+    this_patch <- vertices[vertices$patch == input$display_patch, ]
+    this_patch_data <- this_patch[, "data"]
+    this_patch_names <- unlist(strsplit(this_patch_data, ","))
+    rows <- as.numeric(this_patch_names)
+    datasub <- data[rows, ]
+
+    patch_dists <- dist(datasub)
+    patch_dend <- hclust(patch_dists, input$method)
+    global_dend <- hclust(global_dists, input$method)
+    global_cut <- get_longevity_cut_height(global_dend, max(global_dists))
+    patch_cut <- if (input$clusterer == "local") {
+      get_longevity_cut_height(patch_dend, max(patch_dists))
+    } else {
+      global_cut
+    }
+
+    par(mfrow = c(1, 2))
+    clusters <- cutree(patch_dend, h = patch_cut)
+    num_clusts <- length(unique(clusters))
+    cols <- brewer.pal(num_clusts, "Dark2")
+    col_assign <- sapply(clusters, function(x) cols[x])
+    plot(datasub, pch = 20, col = col_assign, asp = 1, axes = FALSE)
+    plot_dendrogram(
+      patch_dend, input$method,
+      if (input$clusterer == "local") max(patch_dists) else max(global_dists),
+      patch_cut,
+      paste("Patch", input$display_patch),
+      paste("Linkage:", input$method)
+    )
+  })
+
+  output$global_view <- renderPlot({
+    data <- data()
+    global_dists <- dist(data)
+    global_dend <- hclust(global_dists, input$method)
+    global_cut <- get_longevity_cut_height(global_dend, max(global_dists))
+
+    par(mfrow = c(1, 2))
+    clusters <- cutree(global_dend, h = global_cut)
+    num_clusts <- length(unique(clusters))
+    cols <- brewer.pal(num_clusts, "Dark2")
+    col_assign <- sapply(clusters, function(x) cols[x])
+
+    plot(data, pch = 20, col = col_assign, asp = 1, axes = FALSE)
+    plot_dendrogram(
+      global_dend, input$method,
+      max(global_dists), global_cut,
+      "All Data", paste("Linkage:", input$method)
+    )
+  })
 }
 
-# Run the application
+# ------------------------------------------------------------------
+# RUN
+# ------------------------------------------------------------------
 shinyApp(ui = ui, server = server)
