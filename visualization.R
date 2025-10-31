@@ -36,7 +36,6 @@ plot_staggered_data <- function(df, cov, lens_obj, input, filtered_vals) {
           lty = lty_style
         )
       }
-
     } else if (input$lens == "project to y") {
       for (i in seq_len(n_cov)) {
         lty_style <- ifelse(i %% 2 == 0, 2, 1)
@@ -47,7 +46,6 @@ plot_staggered_data <- function(df, cov, lens_obj, input, filtered_vals) {
           lty = lty_style
         )
       }
-
     } else if (input$lens == "theta lens") {
       pinfo <- lens_obj$projection_fn(df, input$theta)
       pvec <- pinfo$vector / sqrt(sum(pinfo$vector^2))
@@ -70,7 +68,6 @@ plot_staggered_data <- function(df, cov, lens_obj, input, filtered_vals) {
           lty = lty_style
         )
       }
-
     } else if (grepl("PCA", input$lens)) {
       pinfo <- lens_obj$projection_fn(df)
       pvec <- pinfo$vector / sqrt(sum(pinfo$vector^2))

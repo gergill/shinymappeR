@@ -14,6 +14,7 @@ source("lens_functions.R")
 source("hierarchical_clusterers.R")
 source("plot_dendrograms.R")
 source("gmapper_cover.R")
+source("width_balanced_cover.R")
 source("visualization.R")
 # ------------------------------------------------------------------
 # USER INTERFACE
@@ -110,7 +111,6 @@ ui <- navbarPage(
 # ------------------------------------------------------------------
 
 server <- function(input, output, session) {
-
   # --- Dynamic Dataset Parameter UI -----------------------------------------
   observeEvent(input$data, {
     generator <- get_generator(input$data)
@@ -165,7 +165,7 @@ server <- function(input, output, session) {
     params <- lapply(names(lens_obj$param_spec), function(p) input[[p]])
     names(params) <- names(lens_obj$param_spec)
     vals <- lens_obj$compute(df, params)
-    names(vals) <- rownames(df)  # ensure alignment
+    names(vals) <- rownames(df)
     vals
   })
 
@@ -208,7 +208,7 @@ server <- function(input, output, session) {
     )
   })
 
-  # --- Reactive: Update Display Patch Slider -------------------------------
+  # --- Update Display Patch Slider -----------------------------------------
   observeEvent(list(input$cover_method, input$num_patches, cover()), {
     if (input$cover_method == "Width-Balanced") {
       updateSliderInput(
@@ -231,7 +231,7 @@ server <- function(input, output, session) {
   })
 
   # ------------------------------------------------------------------
-  # VISUALIZATIONS 
+  # VISUALIZATIONS
   # ------------------------------------------------------------------
 
   output$filtered_data <- renderPlot({
