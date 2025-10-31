@@ -148,7 +148,7 @@ theta_lens <- LensFunction$new(
       type = "slider",
       label = "Theta (radians)",
       min = 0,
-      max = 2 * pi,
+      max = pi,
       value = 0,
       step = 0.01
     )
