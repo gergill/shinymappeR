@@ -193,6 +193,85 @@ barbell_generator <- DatasetGenerator$new(
   }
 )
 
+# 6. Multi-Rotating Gaussians --------------------------------------------------
+multi_gaussians_generator <- DatasetGenerator$new(
+  name = "multi rotating Gaussians",
+  description = paste(
+    "Places an arbitrary number of Gaussian clusters evenly around a circle,",
+    "each optionally with its own standard deviation. The entire configuration",
+    "rotates as angle changes."
+  ),
+  param_spec = list(
+    num_points = list(
+      type = "slider", label = "Total number of points",
+      min = 100, max = 5000, value = 1000, step = 100
+    ),
+    num_gaussians = list(
+      type = "slider", label = "Number of Gaussian clusters",
+      min = 2, max = 15, value = 2, step = 1
+    ),
+    radius = list(
+      type = "slider", label = "Radius of circle",
+      min = 0.1, max = 5, value = 2, step = 0.1
+    ),
+    angle = list(
+      type = "slider", label = "Global rotation (radians)",
+      min = 0, max = 2 * pi, value = 0, step = 0.1
+    ),
+    sd_base = list(
+      type = "slider", label = "Base standard deviation",
+      min = 0.01, max = 1, value = 0.1, step = 0.01
+    ),
+    sd_variation = list(
+      type = "slider", label = "Std. deviation variation across clusters",
+      min = 0, max = 2, value = 0, step = 0.05
+    )
+  ),
+  generate_fn = function(
+    num_points,
+    num_gaussians,
+    radius,
+    angle,
+    sd_base,
+    sd_variation
+  ) {
+    set.seed(137)
+
+    # Points per component distributed as evenly
+    points_per <- rep(floor(num_points / num_gaussians), num_gaussians)
+    remainder <- num_points - sum(points_per)
+    if (remainder > 0) {
+      points_per[seq_len(remainder)] <- points_per[seq_len(remainder)] + 1
+    }
+
+    # evenly spaced cluster means about circle
+    base_angles <- seq(0, 2 * pi, length.out = num_gaussians + 1)[-1] + angle
+
+    # each cluster may have slightly different SDs if sd_variation > 0
+    if (sd_variation == 0) {
+      sds <- rep(sd_base, num_gaussians)
+    } else {
+      sds <- sd_base * (1 + sd_variation *
+        sin(seq(0, 2 * pi, length.out = num_gaussians)))
+    }
+
+    # Generate clusters
+    cluster_list <- lapply(seq_len(num_gaussians), function(i) {
+      n_i <- points_per[i]
+      mean_i <- c(radius * cos(base_angles[i]), radius * sin(base_angles[i]))
+      data.frame(
+        x = rnorm(n_i, mean = mean_i[1], sd = sds[i]),
+        y = rnorm(n_i, mean = mean_i[2], sd = sds[i])
+      )
+    })
+
+    # numeric-only output
+    df <- do.call(rbind, cluster_list)
+    df <- df[sapply(df, is.numeric)]
+    df
+  }
+)
+
 # ---------------------------------------------------------------
 # ---- Registry -------------------------------------------------
 # ---------------------------------------------------------------
@@ -202,7 +281,8 @@ dataset_registry <- list(
   "fading circle" = fading_circle_generator,
   "figure 8" = figure8_generator,
   spiral = spiral_generator,
-  barbell = barbell_generator
+  barbell = barbell_generator,
+  "multi rotating Gaussians" = multi_gaussians_generator
 )
 
 # fetch a generator by name
