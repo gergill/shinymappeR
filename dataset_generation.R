@@ -224,7 +224,7 @@ multi_gaussians_generator <- DatasetGenerator$new(
     ),
     sd_variation = list(
       type = "slider", label = "Std. deviation variation across clusters",
-      min = 0, max = 2, value = 0, step = 0.05
+      min = 0, max = 1, value = 0, step = 0.05
     )
   ),
   generate_fn = function(
