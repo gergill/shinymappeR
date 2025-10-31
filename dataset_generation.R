@@ -7,8 +7,8 @@ DatasetGenerator <- R6::R6Class(
   public = list(
     name = NULL,
     description = NULL,
-    param_spec = NULL,   # list of parameter metadata
-    generate_fn = NULL,  # function that produces a data.frame(x, y)
+    param_spec = NULL, # list of parameter metadata
+    generate_fn = NULL, # function that produces a data.frame(x, y)
 
     initialize = function(name, description, param_spec, generate_fn) {
       self$name <- name
@@ -20,8 +20,11 @@ DatasetGenerator <- R6::R6Class(
     # Data generation method
     generate = function(params = list()) {
       args <- lapply(names(self$param_spec), function(p) {
-        if (!is.null(params[[p]])) params[[p]]
-        else self$param_spec[[p]]$value
+        if (!is.null(params[[p]])) {
+          params[[p]]
+        } else {
+          self$param_spec[[p]]$value
+        }
       })
       names(args) <- names(self$param_spec)
       do.call(self$generate_fn, args)

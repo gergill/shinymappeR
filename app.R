@@ -5,9 +5,10 @@
 #
 #    https://shiny.posit.co/
 #
-
 library(shiny)
 library(mappeR)
+library(RColorBrewer)
+
 source("dataset_generation.R")
 source("lens_functions.R")
 source("hierarchical_clusterers.R")
@@ -36,28 +37,20 @@ ui <- navbarPage(
           "Upload a two-column CSV file (x and y). ",
           "If no file is uploaded, a built-in dataset generator is used."
         ),
-
         selectInput(
           "data",
           "Example Dataset:",
-          choices = names(dataset_registry), # to add a choice: go to dataset_generation.R
+          choices = names(dataset_registry),
           selected = "circle"
         ),
-
-        # dynamic dataset parameter controls produced from generator
         uiOutput("dynamic_dataset_ui"),
-
         selectInput(
           "lens",
           "Lens Function:",
-          choices = c(
-            "project to x",
-            "project to y",
-            "use eccentricity value",
-            "PCA-1",
-            "PCA-2"
-          )
-        )
+          choices = names(lens_registry),
+          selected = "project to x"
+        ),
+        uiOutput("dynamic_lens_ui")
       ),
       mainPanel(
         plotOutput("filtered_data"),
@@ -77,56 +70,24 @@ ui <- navbarPage(
           choices = c("Width-Balanced", "G‑Mapper"),
           selected = "Width-Balanced"
         ),
-
-        # Width‑Balanced Parameters
         conditionalPanel(
           condition = "input.cover_method == 'Width-Balanced'",
-          sliderInput(
-            "num_patches",
-            "Number of patches:",
-            min = 1, max = 20, value = 10
-          ),
-          sliderInput(
-            "percent_overlap",
-            "Percent overlap:",
-            min = 0, max = 100, value = 25
-          )
+          sliderInput("num_patches", "Number of patches:", 1, 20, 10),
+          sliderInput("percent_overlap", "Percent overlap:", 0, 100, 25)
         ),
-
-        # G‑Mapper Parameters
         conditionalPanel(
           condition = "input.cover_method == 'G‑Mapper'",
-          sliderInput(
-            "iterations", "Max iterations:", min = 1, max = 100, value = 20
-          ),
-          sliderInput(
-            "ad_threshold", "A–D threshold:",
-            min = 0.1, max = 10, value = 0.5, step = 0.1
-          ),
-          sliderInput(
-            "g_overlap", "Gaussian overlap:",
-            min = 0.05, max = 0.9, value = 0.3, step = 0.05
-          ),
-          sliderInput(
-            "max_intervals", "Maximum number of intervals:",
-            min = 5, max = 50, value = 10
-          )
+          sliderInput("iterations", "Max iterations:", 1, 100, 20),
+          sliderInput("ad_threshold", "A–D threshold:", 0.1, 10, 0.5, step = 0.1),
+          sliderInput("g_overlap", "Gaussian overlap:", 0.05, 0.9, 0.3, step = 0.05),
+          sliderInput("max_intervals", "Maximum number of intervals:", 5, 50, 10)
         ),
-
         hr(),
-        sliderInput(
-          "display_patch",
-          "Patch to display:",
-          value = 1, min = 1, max = 2, step = 1
-        ),
-        selectInput(
-          "method",
-          "Linkage method:",
+        sliderInput("display_patch", "Patch to display:", value = 1, min = 1, max = 2),
+        selectInput("method", "Linkage method:",
           choices = c("single", "complete", "average", "mcquitty")
         ),
-        selectInput(
-          "clusterer",
-          "Cutting height method:",
+        selectInput("clusterer", "Cutting height method:",
           choices = c("global", "local")
         )
       ),
@@ -145,30 +106,24 @@ ui <- navbarPage(
 # ------------------------------------------------------------------
 
 server <- function(input, output, session) {
-
-  # dynamically update patch slider maximum when the cover method changes
-  observe({
-    if (input$cover_method == "Width-Balanced") {
-      updateSliderInput(session, "display_patch", max = input$num_patches)
-    } else if (input$cover_method == "G‑Mapper") {
-      n_cov <- tryCatch(nrow(cover()), error = function(e) 1)
-      updateSliderInput(session, "display_patch", max = n_cov)
-    }
-  })
-
-  # --- dynamic dataset parameter UI ---------------------------------
+  # --- Dynamic Dataset Parameter UI -----------------------------------------
   observeEvent(input$data, {
     generator <- get_generator(input$data)
     output$dynamic_dataset_ui <- renderUI({
-      generator$get_ui()  # produce list of sliders for dataset params
+      generator$get_ui()
     })
   })
 
-  # --- DATA REACTIVE ------------------------------------------------
+  # --- Dynamic Lens Parameter UI --------------------------------------------
+  observeEvent(input$lens, {
+    lens_obj <- get_lens(input$lens)
+    output$dynamic_lens_ui <- renderUI({
+      lens_obj$get_ui()
+    })
+  })
 
-  # TODO: Add a clear CSV btn so people don't have to reload the application
+  # --- Data Reactive --------------------------------------------------------
   data <- reactive({
-    # Case 1: Uploaded CSV
     if (!is.null(input$upload)) {
       df <- tryCatch(
         read.csv(input$upload$datapath, header = input$header),
@@ -184,17 +139,12 @@ server <- function(input, output, session) {
       return(df)
     }
 
-    # Case 2: Generated dataset from DatasetGenerator class
     gen <- get_generator(input$data)
-
-    param_names <- names(gen$param_spec)
-    params <- lapply(param_names, function(p) input[[p]])
-    names(params) <- param_names
-
+    params <- lapply(names(gen$param_spec), function(p) input[[p]])
+    names(params) <- names(gen$param_spec)
     gen$generate(params)
   })
 
-  # --- DATA SOURCE ---------------------------------------------
   output$data_source <- renderText({
     if (!is.null(input$upload)) {
       paste("Using uploaded dataset:", input$upload$name)
@@ -203,21 +153,20 @@ server <- function(input, output, session) {
     }
   })
 
-  # --- FILTERED DATA -----------------------------------------
+  # --- Filtered Data ---------------------------------------------------------
   filtered_data <- reactive({
-    data <- data()
-    res <- switch(input$lens,
-      "project to x" = data$x,
-      "project to y" = data$y,
-      "use eccentricity value" = eccentricity(data),
-      "PCA-1" = prcomp(data, center = FALSE, scale. = FALSE)$x[, 1],
-      "PCA-2" = prcomp(data, center = FALSE, scale. = FALSE)$x[, 2]
-    )
-    names(res) <- row.names(data)
-    res
+    df <- data()
+    lens_obj <- get_lens(input$lens)
+    params <- lapply(names(lens_obj$param_spec), function(p) input[[p]])
+    names(params) <- names(lens_obj$param_spec)
+
+    vals <- lens_obj$compute(df, params)
+    # 🟢 Ensure names align with the dataset
+    names(vals) <- rownames(df)
+    vals
   })
 
-  # --- COVER GENERATION ---------------------------------------------
+  # --- Cover Creation --------------------------------------------------------
   cover <- reactive({
     lens <- filtered_data()
     if (input$cover_method == "Width-Balanced") {
@@ -236,17 +185,15 @@ server <- function(input, output, session) {
     }
   })
 
-  # --- CLUSTERER ----------------------------------------------------
+  # --- Mapper Object ---------------------------------------------------------
   clusterer <- reactive({
-    data <- data()
-    dists <- dist(data)
+    dists <- dist(data())
     switch(input$clusterer,
       "local" = local_hierarchical_clusterer(input$method),
       "global" = global_hierarchical_clusterer(input$method, dists)
     )
   })
 
-  # --- MAPPER CONSTRUCTION ------------------------------------------
   mapper <- reactive({
     create_1D_mapper_object(
       data(),
@@ -257,13 +204,37 @@ server <- function(input, output, session) {
     )
   })
 
-  # --- PLOTS --------------------------------------------------------
+  # --- update the "Patch to display" slider when cover changes ----
+  observeEvent(list(input$cover_method, input$num_patches, cover()), {
+    if (input$cover_method == "Width-Balanced") {
+      # For width-balanced covers, patches = num_patches
+      updateSliderInput(
+        session,
+        "display_patch",
+        max = input$num_patches,
+        value = min(input$display_patch, input$num_patches),
+        step = 1
+      )
+    } else if (input$cover_method %in% c("G-Mapper", "G‑Mapper")) {
+      n_cov <- tryCatch(nrow(cover()), error = function(e) 1)
+      updateSliderInput(
+        session,
+        "display_patch",
+        max = n_cov,
+        value = min(input$display_patch, n_cov),
+        step = 1
+      )
+    }
+  })
+
+  # --- Plots -----------------------------------------------------------------
+
   output$filtered_data <- renderPlot({
-    data <- data()
-    filtered <- filtered_data()
-    col <- color_gradient(50)[as.numeric(cut(filtered, breaks = 50))]
-    plot(data, pch = 20, axes = FALSE, col = col, asp = 1,
-         xlab = "", ylab = "")
+    vals <- filtered_data()
+    df <- data()
+    col <- colorRampPalette(brewer.pal(9, "YlOrRd"))(50)
+    col_assign <- col[as.numeric(cut(vals, breaks = 50))]
+    plot(df, col = col_assign, pch = 20, asp = 1, axes = FALSE)
   })
 
   output$mapper <- renderPlot({
@@ -271,71 +242,121 @@ server <- function(input, output, session) {
   })
 
   output$staggered_data <- renderPlot({
-    data <- data()
+    df <- data()
     cov <- cover()
+    lens_obj <- get_lens(input$lens)
 
-    # basic scatter
-    plot(
-      data,
-      xlim = c(min(data$x), max(data$x)),
-      pch = 20,
-      asp = 1
+    # Base scatter plot
+    plot(df,
+      asp = 1, pch = 20, col = "grey",
+      xlab = "", ylab = "",
+      xlim = range(df$x), ylim = range(df$y)
     )
 
-    if (input$lens == "project to x") {
-      rect(cov[, 1], min(data$y), cov[, 2], max(data$y),
-        col = color_gradient(input$num_patches, .5)
-      )
+    if (lens_obj$projection) {
+      n_cov <- nrow(cov)
+      cov_colors <- viridis::viridis(n_cov, alpha = 0.35, option = "D")
 
-    } else if (input$lens == "project to y") {
-      rect(min(data$x), cov[, 2], max(data$x), cov[, 1],
-        col = color_gradient(input$num_patches, .5)
-      )
+      if (input$lens == "project to x") {
+        # ---- horizontal rectangles spanning y ----
+        for (i in seq_len(n_cov)) {
+          rect(
+            xleft = cov[i, 1],
+            ybottom = min(df$y),
+            xright = cov[i, 2],
+            ytop = max(df$y),
+            col = cov_colors[i],
+            border = NA
+          )
+        }
+      } else if (input$lens == "project to y") {
+        # ---- vertical rectangles spanning x ----
+        for (i in seq_len(n_cov)) {
+          rect(
+            xleft = min(df$x),
+            ybottom = cov[i, 1],
+            xright = max(df$x),
+            ytop = cov[i, 2],
+            col = cov_colors[i],
+            border = NA
+          )
+        }
+      } else if (input$lens == "theta lens") {
+        pinfo <- lens_obj$projection_fn(df, input$theta)
+        pvec <- pinfo$vector / sqrt(sum(pinfo$vector^2))
 
-    } else if (input$lens == "PCA-1" || input$lens == "PCA-2") {
-      pc_index <- ifelse(input$lens == "PCA-1", 1, 2)
-      pca_output <- prcomp(data, center = FALSE, scale. = FALSE)
-      pca_vector <- pca_output$rotation[, pc_index]
-      slope <- pca_vector[2] / pca_vector[1]
+        # Perpendicular direction = circle radius
+        perp <- c(-pvec[2], pvec[1])
+        perp <- perp / sqrt(sum(perp^2))
 
-      # draw PCA line
-      abline(0, slope, col = "green", lwd = 3, lty = 3)
 
-      # compute perpendicular
-      perp_vector <- c(-pca_vector[2], pca_vector[1])
-      perp_vector <- perp_vector / sqrt(sum(perp_vector^2))
+        # Draw cover strips perpendicular to radius (i.e. along tangent)
+        for (i in seq_len(n_cov)) {
+          # Compute endpoints along tangent direction
+          cut1 <- pinfo$point + cov[i, 1] * pvec
+          cut2 <- pinfo$point + cov[i, 2] * pvec
 
-      # draw cover polygons along PCA direction
-      for (i in seq_len(nrow(cov))) {
-        cut1 <- cov[i, 1] * pca_vector
-        cut2 <- cov[i, 2] * pca_vector
+          # Expand in radial perpendicular direction for visible strip width
+          c1 <- cut1 + 100 * perp
+          c2 <- cut1 - 100 * perp
+          c3 <- cut2 - 100 * perp
+          c4 <- cut2 + 100 * perp
 
-        corner1 <- cut1 + 100 * perp_vector
-        corner2 <- cut1 - 100 * perp_vector
-        corner3 <- cut2 - 100 * perp_vector
-        corner4 <- cut2 + 100 * perp_vector
+          polygon(
+            x = c(c1[1], c2[1], c3[1], c4[1]),
+            y = c(c1[2], c2[2], c3[2], c4[2]),
+            col = cov_colors[i], border = NA
+          )
+        }
+      } else if (grepl("PCA", input$lens)) {
+        # ---- PCA projection lines/cover polygons ----
+        pinfo <- lens_obj$projection_fn(df)
+        pvec <- pinfo$vector / sqrt(sum(pinfo$vector^2))
+        slope <- pvec[2] / pvec[1]
 
-        polygon(
-          x = c(corner1[1], corner2[1], corner3[1], corner4[1]),
-          y = c(corner1[2], corner2[2], corner3[2], corner4[2]),
-          col = color_gradient(nrow(cov), .5)[i],
-          border = NA
-        )
+        # Draw main PCA direction
+        abline(a = 0, b = slope, col = "darkgreen", lwd = 3, lty = 3)
+
+        # Draw cover tiles perpendicular to PCA vector
+        perp <- c(-pvec[2], pvec[1])
+        perp <- perp / sqrt(sum(perp^2))
+
+        for (i in seq_len(n_cov)) {
+          cut1 <- cov[i, 1] * pvec
+          cut2 <- cov[i, 2] * pvec
+
+          c1 <- cut1 + 100 * perp
+          c2 <- cut1 - 100 * perp
+          c3 <- cut2 - 100 * perp
+          c4 <- cut2 + 100 * perp
+
+          polygon(
+            x = c(c1[1], c2[1], c3[1], c4[1]),
+            y = c(c1[2], c2[2], c3[2], c4[2]),
+            col = cov_colors[i], border = NA
+          )
+        }
       }
+    } else {
+      # Color points by non-projection lens value
+      vals <- filtered_data()
+      val_colors <- colorRampPalette(brewer.pal(9, "YlOrRd"))(50)
+      col_assign <- val_colors[as.numeric(cut(vals, breaks = 50))]
+      points(df, col = col_assign, pch = 20)
     }
   })
 
   output$patch_view <- renderPlot({
-    data <- data()
+    df <- data()
     mapper_obj <- mapper()
     vertices <- mapper_obj[[1]]
-    global_dists <- dist(data)
+    global_dists <- dist(df)
 
     this_patch <- vertices[vertices$patch == input$display_patch, ]
     this_patch_data <- this_patch[, "data"]
     this_patch_names <- unlist(strsplit(this_patch_data, ","))
     rows <- as.numeric(this_patch_names)
-    datasub <- data[rows, ]
+    datasub <- df[rows, ]
 
     patch_dists <- dist(datasub)
     patch_dend <- hclust(patch_dists, input$method)
@@ -356,15 +377,14 @@ server <- function(input, output, session) {
     plot_dendrogram(
       patch_dend, input$method,
       if (input$clusterer == "local") max(patch_dists) else max(global_dists),
-      patch_cut,
-      paste("Patch", input$display_patch),
+      patch_cut, paste("Patch", input$display_patch),
       paste("Linkage:", input$method)
     )
   })
 
   output$global_view <- renderPlot({
-    data <- data()
-    global_dists <- dist(data)
+    df <- data()
+    global_dists <- dist(df)
     global_dend <- hclust(global_dists, input$method)
     global_cut <- get_longevity_cut_height(global_dend, max(global_dists))
 
@@ -374,7 +394,7 @@ server <- function(input, output, session) {
     cols <- brewer.pal(num_clusts, "Dark2")
     col_assign <- sapply(clusters, function(x) cols[x])
 
-    plot(data, pch = 20, col = col_assign, asp = 1, axes = FALSE)
+    plot(df, pch = 20, col = col_assign, asp = 1, axes = FALSE)
     plot_dendrogram(
       global_dend, input$method,
       max(global_dists), global_cut,
@@ -384,6 +404,6 @@ server <- function(input, output, session) {
 }
 
 # ------------------------------------------------------------------
-# RUN
+# RUN APP
 # ------------------------------------------------------------------
 shinyApp(ui = ui, server = server)
