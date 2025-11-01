@@ -7,9 +7,11 @@
 
   outputs = { self, nixpkgs, ... }:
     let
-      supportedSystems = [ "x86_64-linux" "aarch64-darwin" ];
+      # Define which platforms you support
+      systems = [ "x86_64-linux" "aarch64-darwin" ];
 
-      forAllSystems = f: nixpkgs.lib.genAttrs supportedSystems (system:
+      # Helper to make per-system outputs
+      forAllSystems = nixpkgs.lib.genAttrs systems (system:
         let
           pkgs = import nixpkgs { inherit system; };
 
@@ -44,7 +46,7 @@
         {
           formatter = pkgs.nixfmt-rfc-style;
 
-          devShell = pkgs.mkShell {
+          devShells.default = pkgs.mkShell {
             LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath [
               pkgs.stdenv.cc.cc
               pkgs.libz
@@ -75,9 +77,12 @@
             '';
           };
         });
+    in
+    {
+      formatter = nixpkgs.lib.genAttrs systems
+        (system: forAllSystems.${system}.formatter);
 
-    in forAllSystems (systemOutputs: {
-      formatter.${builtins.match ".*" systemOutputs} = systemOutputs.formatter;
-      devShells.${builtins.match ".*" systemOutputs}.default = systemOutputs.devShell;
-    });
+      devShells = nixpkgs.lib.genAttrs systems
+        (system: forAllSystems.${system}.devShells);
+    };
 }
