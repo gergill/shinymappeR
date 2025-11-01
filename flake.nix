@@ -19,6 +19,7 @@
             packages = with pkgs.rPackages; [
               mappeR
               ggplot2
+	      patchwork
               shiny
               dplyr
               tidyr
