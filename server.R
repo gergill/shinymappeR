@@ -9,6 +9,7 @@ source("plot_dendrograms.R")
 source("gmapper_cover.R")
 source("width_balanced_cover.R")
 source("visualization.R")
+source("plot_histograms.R")
 
 server <- function(input, output, session) {
   # --- Dataset Parameter UI -----------------------------------------
@@ -150,6 +151,22 @@ server <- function(input, output, session) {
       input,
       filtered_data()
     )
+  })
+
+  output$cluster_histograms <- renderPlot({
+    plot_cluster_histograms(data(), mapper(), filtered_data(), input$display_patch)
+  })
+
+  output$global_histogram <- renderPlot({
+    plot_global_histogram(filtered_data())
+  })
+
+  output$patch_histogram <- renderPlot({
+    plot_patch_histogram(data(), mapper(), filtered_data(), input$display_patch)
+  })
+
+  output$cluster_histograms <- renderPlot({
+    plot_cluster_histograms(data(), mapper(), filtered_data(), input$display_patch)
   })
 
   output$patch_view <- renderPlot({

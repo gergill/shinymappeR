@@ -171,7 +171,7 @@ hr {
 "
 
 # ------------------------------------------------------------------
-# Actual UI
+# UI Definition
 # ------------------------------------------------------------------
 
 ui <- fluidPage(
@@ -182,12 +182,13 @@ ui <- fluidPage(
   # --- Main Container -----------------------------------------
   div(
     id = "main-container",
-    
-    # --- Left Panel -----------------------------------
+
+    # --- Left Panel -------------------------------------------
     div(
       id = "left-panel",
       h3("1D Mapper Parameters"),
 
+      # Dataset section
       div(
         class = "param-section",
         h4("Dataset"),
@@ -210,6 +211,7 @@ ui <- fluidPage(
         uiOutput("dynamic_dataset_ui")
       ),
 
+      # Lens section
       div(
         class = "param-section",
         h4("Lens Function"),
@@ -222,6 +224,7 @@ ui <- fluidPage(
         uiOutput("dynamic_lens_ui")
       ),
 
+      # Cover method section
       div(
         class = "param-section",
         h4("Covering Method"),
@@ -239,17 +242,19 @@ ui <- fluidPage(
         conditionalPanel(
           condition = "input.cover_method == 'G‑Mapper'",
           sliderInput("iterations", "Max iterations:", 1, 100, 20),
-          sliderInput("ad_threshold", "A–D threshold:", 0.1, 10, 0.5, step = 0.1),
+          sliderInput("ad_threshold", "A–D threshold:", 0.1, 100, 0.5, step = 0.1),
           sliderInput("g_overlap", "Gaussian overlap:", 0.05, 0.9, 0.3, step = 0.05),
           sliderInput("max_intervals", "Maximum number of intervals:", 5, 50, 10)
         )
       ),
 
+      # Clustering / Display section
       div(
         class = "param-section",
         h4("Clustering / Display"),
-        sliderInput("display_patch", "Patch to display:", 
-                    value = 1, min = 1, max = 2),
+        sliderInput("display_patch", "Patch to display:",
+          value = 1, min = 1, max = 2
+        ),
         selectInput(
           "method",
           "Linkage method:",
@@ -263,14 +268,14 @@ ui <- fluidPage(
       )
     ),
 
-    # --- Right Panel -----------------------------------
+    # --- Right Panel ------------------------------------------
     div(
       id = "right-panel",
       tabsetPanel(
         id = "viz-tabs",
         type = "tabs",
 
-        # --- Mapper View Tab --------------------------------------------
+        # --- Mapper View Tab ------------------------------------
         tabPanel(
           "Mapper View",
           div(
@@ -286,13 +291,15 @@ ui <- fluidPage(
           )
         ),
 
-        # --- Cover / Cluster View Tab ------------------------------------
+        # --- Cover / Cluster View Tab ----------------------------
         tabPanel(
           "Cover / Cluster View",
           div(
             class = "viz-card",
             div(
               class = "plot-container",
+              h3("Mapper Graph"),
+              plotOutput("mapper", height = "500px"),
               h3("Covered Data"),
               plotOutput("staggered_data", height = "300px"),
               h3("Patch View (Local Dendrogram)"),
@@ -300,6 +307,21 @@ ui <- fluidPage(
               h3("Global View (Global Dendrogram)"),
               plotOutput("global_view", height = "300px")
             )
+          ),
+          div(
+            class = "viz-card",
+            h3("Global Histogram"),
+            plotOutput("global_histogram", height = "300px")
+          ),
+          div(
+            class = "viz-card",
+            h3("Patch Histogram"),
+            plotOutput("patch_histogram", height = "300px")
+          ),
+          div(
+            class = "viz-card",
+            h3("Cluster Histograms"),
+            plotOutput("cluster_histograms", height = "600px")
           )
         )
       )

@@ -228,13 +228,12 @@ multi_gaussians_generator <- DatasetGenerator$new(
     )
   ),
   generate_fn = function(
-    num_points,
-    num_gaussians,
-    radius,
-    angle,
-    sd_base,
-    sd_variation
-  ) {
+      num_points,
+      num_gaussians,
+      radius,
+      angle,
+      sd_base,
+      sd_variation) {
     set.seed(137)
 
     # Points per component distributed as evenly
