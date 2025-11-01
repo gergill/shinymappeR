@@ -5,71 +5,79 @@
     nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
   };
 
-  outputs =
-    { self, nixpkgs, ... }:
+  outputs = { self, nixpkgs, ... }:
     let
-      system = "x86_64-linux";
-      pkgs = nixpkgs.legacyPackages.${system};
+      supportedSystems = [ "x86_64-linux" "aarch64-darwin" ];
 
-      rEnv = pkgs.rWrapper.override {
-        packages = with pkgs.rPackages; [
-          mappeR
-          ggplot2
-          shiny
-          dplyr
-          tidyr
-          devtools
-          remotes
-          RColorBrewer
-          mclust
-          nortest
-          dendextend
-          igraph
-          httpuv
-          styler
-          lintr
-        ];
-      };
+      forAllSystems = f: nixpkgs.lib.genAttrs supportedSystems (system:
+        let
+          pkgs = import nixpkgs { inherit system; };
 
-      texlive = pkgs.texlive.combine {
-        inherit (pkgs.texlive)
-          scheme-basic
-          collection-latexextra
-          biber
-          latexmk
-          ;
-      };
-    in
-    {
-      formatter.${system} = pkgs.nixfmt-rfc-style;
+          rEnv = pkgs.rWrapper.override {
+            packages = with pkgs.rPackages; [
+              mappeR
+              ggplot2
+              shiny
+              dplyr
+              tidyr
+              devtools
+              remotes
+              RColorBrewer
+              mclust
+              nortest
+              dendextend
+              igraph
+              httpuv
+              styler
+              lintr
+            ];
+          };
 
-      devShells.${system}.default = pkgs.mkShell {
-        LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath [
-          pkgs.stdenv.cc.cc
-          pkgs.libz
-        ];
+          texlive = pkgs.texlive.combine {
+            inherit (pkgs.texlive)
+              scheme-basic
+              collection-latexextra
+              biber
+              latexmk;
+          };
+        in
+        {
+          formatter = pkgs.nixfmt-rfc-style;
 
-        LC_ALL = "en_US.UTF-8";
+          devShell = pkgs.mkShell {
+            LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath [
+              pkgs.stdenv.cc.cc
+              pkgs.libz
+            ];
 
-        buildInputs = with pkgs; [
-          rEnv
-          texlive
-          pkgs.R
-          pkgs.pkg-config
-          pkgs.zlib.dev
-          pkgs.openssl.dev
-          pkgs.curl.dev
-          just
-          watchexec
-          self.formatter.${system}
-        ];
+            LC_ALL = "en_US.UTF-8";
 
-        shellHook = ''
-          echo "Entering R dev environment..."
-          echo "R: $(R --version | head -n 1)"
-          echo "LaTeX: $(which pdflatex)"
-          just --list-heading $'Commands:\n' --list-prefix "    just " --no-aliases --list
-        '';
-      };
-    };
+            buildInputs = with pkgs; [
+              rEnv
+              texlive
+              R
+              pkg-config
+              zlib.dev
+              openssl.dev
+              curl.dev
+              just
+              watchexec
+              self.formatter.${system}
+            ];
+
+            shellHook = ''
+              echo "Entering R dev environment for ${system}..."
+              echo "R: $(R --version | head -n 1)"
+              echo "LaTeX: $(which pdflatex)"
+              just --list-heading $'Commands:\n' \
+                   --list-prefix "    just " \
+                   --no-aliases --list
+            '';
+          };
+        });
+
+    in forAllSystems (systemOutputs: {
+      formatter.${builtins.match ".*" systemOutputs} = systemOutputs.formatter;
+      devShells.${builtins.match ".*" systemOutputs}.default = systemOutputs.devShell;
+    });
 }
