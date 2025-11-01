@@ -275,53 +275,87 @@ ui <- fluidPage(
         id = "viz-tabs",
         type = "tabs",
 
-        # --- Mapper View Tab ------------------------------------
+        # --- Single Visualization Tab ---------------------------
         tabPanel(
-          "Mapper View",
+          "Visualization",
+          
+          # 1. Original Data
           div(
             class = "viz-card",
+            h4("Original Data"),
             div(
               class = "plot-container",
               textOutput("data_source"),
-              h3("Filtered Data"),
-              plotOutput("filtered_data", height = "320px"),
-              h3("Mapper Graph"),
-              plotOutput("mapper", height = "500px")
+              plotOutput("filtered_data", height = "320px")
             )
-          )
-        ),
-
-        # --- Cover / Cluster View Tab ----------------------------
-        tabPanel(
-          "Cover / Cluster View",
+          ),
+          
+          # 2. Mapper Graph
           div(
             class = "viz-card",
+            h4("Mapper Graph"),
             div(
               class = "plot-container",
-              h3("Mapper Graph"),
-              plotOutput("mapper", height = "500px"),
-              h3("Covered Data"),
-              plotOutput("staggered_data", height = "300px"),
-              h3("Patch View (Local Dendrogram)"),
-              plotOutput("patch_view", height = "300px"),
-              h3("Global View (Global Dendrogram)"),
+              plotOutput("mapper", height = "500px")
+            )
+          ),
+          
+          # 3. Global View
+          div(
+            class = "viz-card",
+            h4("Global View"),
+            div(
+              class = "plot-container",
               plotOutput("global_view", height = "300px")
             )
           ),
+          
           div(
             class = "viz-card",
-            h3("Global Histogram"),
-            plotOutput("global_histogram", height = "300px")
+            h4("Global Histogram"),
+            div(
+              class = "plot-container",
+              plotOutput("global_histogram", height = "900px")
+            )
           ),
+          
+          # 4. Cover Visualization
           div(
             class = "viz-card",
-            h3("Patch Histogram"),
-            plotOutput("patch_histogram", height = "300px")
+            h4("Cover Visualization"),
+            div(
+              class = "plot-container",
+              plotOutput("staggered_data", height = "300px")
+            )
           ),
+          
+          # 5. Patch View
           div(
             class = "viz-card",
-            h3("Cluster Histograms"),
-            plotOutput("cluster_histograms", height = "600px")
+            h4("Patch View (Local Dendrogram)"),
+            div(
+              class = "plot-container",
+              plotOutput("patch_view", height = "300px")
+            )
+          ),
+          
+          div(
+            class = "viz-card",
+            h4("Patch Histogram"),
+            div(
+              class = "plot-container",
+              plotOutput("patch_histogram", height = "300px")
+            )
+          ),
+          
+          # 6. Cluster View
+          div(
+            class = "viz-card",
+            h4("Cluster View"),
+            div(
+              class = "plot-container",
+              plotOutput("cluster_histograms", height = "600px")
+            )
           )
         )
       )
