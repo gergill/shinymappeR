@@ -161,6 +161,10 @@ server <- function(input, output, session) {
     plot_global_histogram(filtered_data())
   })
 
+  output$mapper_cover_splits <- renderPlot({
+    plot_mapper_cover_splits(cover(), filtered_data(), bins = 30)
+  })
+
   output$patch_histogram <- renderPlot({
     plot_patch_histogram(data(), mapper(), filtered_data(), input$display_patch)
   })

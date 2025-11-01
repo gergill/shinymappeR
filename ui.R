@@ -315,7 +315,8 @@ ui <- fluidPage(
             h4("Global Histogram"),
             div(
               class = "plot-container",
-              plotOutput("global_histogram", height = "900px")
+              plotOutput("global_histogram", height = "900px"),
+	      plotOutput("mapper_cover_splits", height="300px")
             )
           ),
           
