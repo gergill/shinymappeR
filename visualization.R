@@ -16,14 +16,16 @@ plot_mapper_graph <- function(mapper_obj) {
 # --- Mapper Cover Splits Line Plot -------------------------
 plot_mapper_cover_splits <- function(cov, lens_values = NULL, bins = 30) {
   if (is.null(cov) || nrow(cov) == 0) {
-    plot(1, 1, type = "n", xlab = "Lens Values", ylab = "Intervals", 
-         main = "No cover intervals to display")
+    plot(1, 1,
+      type = "n", xlab = "Lens Values", ylab = "Intervals",
+      main = "No cover intervals to display"
+    )
     return()
   }
-  
+
   n_cov <- nrow(cov)
   cov_colors <- viridis::viridis(n_cov, alpha = 0.7, option = "D")
-  
+
   # Use the same x-range logic as the GMM histogram
   if (!is.null(lens_values)) {
     lens_values <- na.omit(lens_values)
@@ -32,42 +34,54 @@ plot_mapper_cover_splits <- function(cov, lens_values = NULL, bins = 30) {
   } else {
     x_range <- range(cov)
   }
-  
+
   # Set up the plot area with matching dimensions
   x_padding <- diff(x_range) * 0.05
-  plot(x_range + c(-x_padding, x_padding), c(0, n_cov + 1), 
-       type = "n", xlab = "Lens Values", ylab = "Interval Index", 
-       main = "Mapper Cover Splits", axes = TRUE)
-  
+  plot(x_range + c(-x_padding, x_padding), c(0, n_cov + 1),
+    type = "n", xlab = "Lens Values", ylab = "Interval Index",
+    main = "Mapper Cover Splits", axes = TRUE
+  )
+
   # Add grid for better readability
   abline(h = 1:n_cov, col = "lightgray", lty = 3, lwd = 0.5)
-  
+
   # Plot each interval as a rectangle with offset height
   rect_height <- 0.6
   for (i in seq_len(n_cov)) {
-    y_bottom <- i - rect_height/2
-    y_top <- i + rect_height/2
-    
+    y_bottom <- i - rect_height / 2
+    y_top <- i + rect_height / 2
+
     # Draw rectangle for this interval
     rect(cov[i, 1], y_bottom, cov[i, 2], y_top,
-         col = cov_colors[i], 
-         border = "black", 
-         lwd = 1.2)
-    
+      col = cov_colors[i],
+      border = "black",
+      lwd = 1.2
+    )
+
     # Add interval label
-    text(mean(cov[i, ]), i, labels = paste0("I", i), 
-         cex = 0.8, col = "white", font = 2)
+    text(mean(cov[i, ]), i,
+      labels = paste0("I", i),
+      cex = 0.8, col = "white", font = 2
+    )
   }
-  
-  
+
+
   # Add range information as text
   if (!is.null(lens_values)) {
-    mtext(paste("Lens range: [", round(min(lens_values), 3), ",", 
-                round(max(lens_values), 3), "]"), 
-          side = 1, line = 3, cex = 0.8, col = "darkgray")
-    mtext(paste("Cover range: [", round(min(cov), 3), ",", 
-                round(max(cov), 3), "]"), 
-          side = 1, line = 4, cex = 0.8, col = "darkblue")
+    mtext(
+      paste(
+        "Lens range: [", round(min(lens_values), 3), ",",
+        round(max(lens_values), 3), "]"
+      ),
+      side = 1, line = 3, cex = 0.8, col = "darkgray"
+    )
+    mtext(
+      paste(
+        "Cover range: [", round(min(cov), 3), ",",
+        round(max(cov), 3), "]"
+      ),
+      side = 1, line = 4, cex = 0.8, col = "darkblue"
+    )
   }
 }
 

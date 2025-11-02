@@ -5,13 +5,18 @@
     nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
   };
 
-  outputs = { self, nixpkgs, ... }:
+  outputs =
+    { self, nixpkgs, ... }:
     let
       # Define which platforms you support
-      systems = [ "x86_64-linux" "aarch64-darwin" ];
+      systems = [
+        "x86_64-linux"
+        "aarch64-darwin"
+      ];
 
       # Helper to make per-system outputs
-      forAllSystems = nixpkgs.lib.genAttrs systems (system:
+      forAllSystems = nixpkgs.lib.genAttrs systems (
+        system:
         let
           pkgs = import nixpkgs { inherit system; };
 
@@ -19,7 +24,7 @@
             packages = with pkgs.rPackages; [
               mappeR
               ggplot2
-	      patchwork
+              patchwork
               shiny
               dplyr
               tidyr
@@ -41,7 +46,8 @@
               scheme-basic
               collection-latexextra
               biber
-              latexmk;
+              latexmk
+              ;
           };
         in
         {
@@ -77,13 +83,12 @@
                    --no-aliases --list
             '';
           };
-        });
+        }
+      );
     in
     {
-      formatter = nixpkgs.lib.genAttrs systems
-        (system: forAllSystems.${system}.formatter);
+      formatter = nixpkgs.lib.genAttrs systems (system: forAllSystems.${system}.formatter);
 
-      devShells = nixpkgs.lib.genAttrs systems
-        (system: forAllSystems.${system}.devShells);
+      devShells = nixpkgs.lib.genAttrs systems (system: forAllSystems.${system}.devShells);
     };
 }

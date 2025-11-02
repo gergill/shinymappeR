@@ -13,7 +13,7 @@ library(ggplot2)
 # -------------------------------------------------------------------
 # GLOBAL histogram of lens values + single normal fit
 # -------------------------------------------------------------------
-plot_global_histogram <- function(lens_values, G = NULL, bins = 30, emphasize = TRUE) {
+plot_global_histogram <- function(lens_values, G = NULL, bins = 50, emphasize = TRUE) {
   library(ggplot2)
   library(mclust)
   library(dplyr)
@@ -21,17 +21,18 @@ plot_global_histogram <- function(lens_values, G = NULL, bins = 30, emphasize = 
 
   lens_values <- na.omit(lens_values)
   if (length(lens_values) < 2) {
-    return(ggplot() + ggtitle("Not enough data for GMM fit."))
+    return(ggplot() +
+      ggtitle("Not enough data for GMM fit."))
   }
 
   # Fit GMM (auto-select if G = NULL)
   gmm_fit <- Mclust(lens_values, G = G)
-  
+
   # Extract parameters more robustly
   means <- gmm_fit$parameters$mean
   probs <- gmm_fit$parameters$pro
   n_comp <- gmm_fit$G
-  
+
   # Handle variance extraction based on model type
   if (n_comp == 1) {
     sds <- sqrt(gmm_fit$parameters$variance$sigmasq)
@@ -46,7 +47,7 @@ plot_global_histogram <- function(lens_values, G = NULL, bins = 30, emphasize = 
       sds <- rep(sqrt(gmm_fit$parameters$variance$sigmasq), n_comp)
     }
   }
-  
+
   # Ensure we have the right number of parameters
   if (length(sds) == 1 && n_comp > 1) {
     sds <- rep(sds, n_comp)
@@ -105,18 +106,19 @@ plot_global_histogram <- function(lens_values, G = NULL, bins = 30, emphasize = 
       x = "Lens Value", y = "Density"
     ) +
     # Add legend for the mixture line
-    annotate("text", 
-             x = Inf, y = Inf, 
-             label = "— Mixture Model",
-             hjust = 1, vjust = 1, size = 3.5, color = "#e41a1c")
+    annotate("text",
+      x = Inf, y = Inf,
+      label = "— Mixture Model",
+      hjust = 1, vjust = 1, size = 3.5, color = "#e41a1c"
+    )
 
   # --- Bottom: GMM components only ---
   p_gmm <- ggplot() +
-    #geom_line(
+    # geom_line(
     #  data = mixture_density,
     #  aes(x = lens, y = density),
     #  color = "#e41a1c", linewidth = 1.2, alpha = 0.1
-    #) +
+    # ) +
     geom_line(
       data = component_df_display,
       aes(x = lens, y = density, color = component),
@@ -130,12 +132,15 @@ plot_global_histogram <- function(lens_values, G = NULL, bins = 30, emphasize = 
       color = "Component"
     ) +
     # Add parameter annotations
-    annotate("text", 
-             x = Inf, y = Inf, 
-             label = paste0("μ: ", paste(round(means, 3), collapse = ", "), "\n",
-                           "σ: ", paste(round(sds, 3), collapse = ", "), "\n",
-                           "w: ", paste(round(probs, 3), collapse = ", ")),
-             hjust = 1, vjust = 1, size = 3, alpha = 0.8)
+    annotate("text",
+      x = Inf, y = Inf,
+      label = paste0(
+        "μ: ", paste(round(means, 3), collapse = ", "), "\n",
+        "σ: ", paste(round(sds, 3), collapse = ", "), "\n",
+        "w: ", paste(round(probs, 3), collapse = ", ")
+      ),
+      hjust = 1, vjust = 1, size = 3, alpha = 0.8
+    )
 
   # Stack the two plots vertically using patchwork
   p_hist / p_gmm + plot_layout(heights = c(2, 1.2))

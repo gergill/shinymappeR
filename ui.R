@@ -278,7 +278,7 @@ ui <- fluidPage(
         # --- Single Visualization Tab ---------------------------
         tabPanel(
           "Visualization",
-          
+
           # 1. Original Data
           div(
             class = "viz-card",
@@ -289,7 +289,7 @@ ui <- fluidPage(
               plotOutput("filtered_data", height = "320px")
             )
           ),
-          
+
           # 2. Mapper Graph
           div(
             class = "viz-card",
@@ -299,7 +299,7 @@ ui <- fluidPage(
               plotOutput("mapper", height = "500px")
             )
           ),
-          
+
           # 3. Global View
           div(
             class = "viz-card",
@@ -309,17 +309,16 @@ ui <- fluidPage(
               plotOutput("global_view", height = "300px")
             )
           ),
-          
           div(
             class = "viz-card",
             h4("Global Histogram"),
             div(
               class = "plot-container",
               plotOutput("global_histogram", height = "900px"),
-	      plotOutput("mapper_cover_splits", height="300px")
+              plotOutput("mapper_cover_splits", height = "300px")
             )
           ),
-          
+
           # 4. Cover Visualization
           div(
             class = "viz-card",
@@ -329,7 +328,7 @@ ui <- fluidPage(
               plotOutput("staggered_data", height = "300px")
             )
           ),
-          
+
           # 5. Patch View
           div(
             class = "viz-card",
@@ -339,7 +338,6 @@ ui <- fluidPage(
               plotOutput("patch_view", height = "300px")
             )
           ),
-          
           div(
             class = "viz-card",
             h4("Patch Histogram"),
@@ -348,7 +346,7 @@ ui <- fluidPage(
               plotOutput("patch_histogram", height = "300px")
             )
           ),
-          
+
           # 6. Cluster View
           div(
             class = "viz-card",
