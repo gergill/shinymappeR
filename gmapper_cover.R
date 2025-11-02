@@ -38,7 +38,6 @@ split_interval <- function(interval, data, g_overlap) {
   means <- as.numeric(gmm$parameters$mean)
   sigs_raw <- gmm$parameters$variance$sigmasq
   sigs <- as.numeric(sigs_raw)
-
   if (length(sigs) == 1) sigs <- rep(sigs, length(means))
 
   order_idx <- order(means)
@@ -52,33 +51,44 @@ split_interval <- function(interval, data, g_overlap) {
     return(NULL)
   }
 
-  left_mean <- means[1]
-  right_mean <- means[2]
-  left_std <- sds[1]
-  right_std <- sds[2]
+  m1 <- means[1]
+  m2 <- means[2]
+  sigma1 <- sds[1]
+  sigma2 <- sds[2]
 
-  new_upper <- left_mean + (1 + g_overlap) * left_std /
-    (left_std + right_std) * (right_mean - left_mean)
-  new_lower <- right_mean - (1 + g_overlap) * right_std /
-    (left_std + right_std) * (right_mean - left_mean)
+  # min() constraint to ensure left_upper <= m2
+  left_upper <- min(
+    m1 + (1 + g_overlap) * sigma1 / (sigma1 + sigma2) * (m2 - m1),
+    m2
+  )
 
-  cat("New lower:", new_lower, "upper:", new_upper, "\n")
+  # max() constraint to ensure right_lower >= m1
+  right_lower <- max(
+    m2 - (1 + g_overlap) * sigma2 / (sigma1 + sigma2) * (m2 - m1),
+    m1
+  )
 
-  if (new_upper > (interval$upper - 1e-6) ||
-    new_lower < (interval$lower + 1e-6)) {
+  cat("Left upper:", left_upper, "Right lower:", right_lower, "\n")
+
+  # check if split is valid
+  if (left_upper > (interval$upper - 1e-6) ||
+    right_lower < (interval$lower + 1e-6)) {
     cat("Rejected due to bounds check\n")
     return(NULL)
   }
 
   list(
-    make_interval(data, interval$lower, new_upper, interval$members),
-    make_interval(data, new_lower, interval$upper, interval$members)
+    make_interval(data, interval$lower, left_upper, interval$members),
+    make_interval(data, right_lower, interval$upper, interval$members)
   )
 }
 
-bfs_gmapper <- function(lens, iterations, max_intervals, ad_threshold, g_overlap) {
+bfs_gmapper <- function(
+    lens, iterations, max_intervals, ad_threshold, g_overlap) {
   # Initialize cover as one interval
-  cover <- list(make_interval(lens, min(lens), max(lens)))
+  data_min <- min(lens)
+  data_max <- max(lens)
+  cover <- list(make_interval(lens, data_min, data_max))
   iter <- 0
 
   while (iter < iterations) {
@@ -120,11 +130,26 @@ bfs_gmapper <- function(lens, iterations, max_intervals, ad_threshold, g_overlap
     if (!splits_occurred) break
   }
 
+  # ensure leftmost interval extends to data_min
+  lower_bounds <- sapply(cover, function(iv) iv$lower)
+  leftmost_idx <- which.min(lower_bounds)
+  if (cover[[leftmost_idx]]$lower != data_min) {
+    cover[[leftmost_idx]]$lower <- data_min
+  }
+
+  # ensure rightmost interval extends to data_max
+  upper_bounds <- sapply(cover, function(iv) iv$upper)
+  rightmost_idx <- which.max(upper_bounds)
+  if (cover[[rightmost_idx]]$upper != data_max) {
+    cover[[rightmost_idx]]$upper <- data_max
+  }
+
   return(cover)
 }
 
 create_gmapper_cover <- function(
-    lens, iterations = 20, max_intervals = 10, ad_threshold = 0.5, g_overlap = 0.3) {
+    lens, iterations = 20, max_intervals = 10,
+    ad_threshold = 0.5, g_overlap = 0.3) {
   cov <- bfs_gmapper(lens, iterations, max_intervals, ad_threshold, g_overlap)
   do.call(rbind, lapply(cov, \(iv) c(iv$lower, iv$upper)))
 }
