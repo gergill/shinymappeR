@@ -36,11 +36,9 @@ split_interval <- function(interval, data, g_overlap) {
   }
 
   means <- as.numeric(gmm$parameters$mean)
-  # ---- variance handling for univariate case ----
   sigs_raw <- gmm$parameters$variance$sigmasq
   sigs <- as.numeric(sigs_raw)
 
-  # if Equal variance model, only one variance -> duplicate it
   if (length(sigs) == 1) sigs <- rep(sigs, length(means))
 
   order_idx <- order(means)
@@ -49,7 +47,6 @@ split_interval <- function(interval, data, g_overlap) {
 
   cat("Means:", means, "SDs:", sds, "\n")
 
-  # guard against remaining NAs
   if (any(is.na(sds)) || any(is.na(means))) {
     cat("NA detected in GMM parameters, aborting split\n")
     return(NULL)
@@ -80,29 +77,47 @@ split_interval <- function(interval, data, g_overlap) {
 }
 
 bfs_gmapper <- function(lens, iterations, max_intervals, ad_threshold, g_overlap) {
+  # Initialize cover as one interval
   cover <- list(make_interval(lens, min(lens), max(lens)))
   iter <- 0
 
-  while (TRUE) {
+  while (iter < iterations) {
     if (length(cover) >= max_intervals) break
-    if (iter > iterations) break
-
-    # pick interval with largest (most negative ad_score)
-    idx <- which.min(sapply(cover, \(x) x$ad_score))
-    worst <- cover[[idx]]
-
-    if (-worst$ad_score < ad_threshold) break
 
     iter <- iter + 1
-    new_intervals <- split_interval(worst, lens, g_overlap)
-    if (is.null(new_intervals)) {
-      # can't split
-      cover[[idx]]$ad_score <- Inf
-      next
+    new_cover <- list()
+    splits_occurred <- FALSE
+
+    # iterate through each interval
+    for (i in seq_along(cover)) {
+      interval <- cover[[i]]
+
+      # if interval passes AD test (looks normal)
+      if (-interval$ad_score < ad_threshold) {
+        # looks normal, keep as-is
+        new_cover <- append(new_cover, list(interval))
+      } else {
+        # not normal, try to split
+        new_intervals <- split_interval(interval, lens, g_overlap)
+
+        if (is.null(new_intervals)) {
+          # can't split, keep original
+          new_cover <- append(new_cover, list(interval))
+        } else {
+          # splitted
+          new_cover <- append(new_cover, new_intervals)
+          splits_occurred <- TRUE
+        }
+      }
+
+      if (length(new_cover) >= max_intervals) break
     }
 
-    # replace with new intervals
-    cover <- append(cover[-idx], new_intervals)
+    # update cover for next iteration
+    cover <- new_cover
+
+    # no splits, done!
+    if (!splits_occurred) break
   }
 
   return(cover)
