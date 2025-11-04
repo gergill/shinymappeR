@@ -7,6 +7,7 @@ source("lens_functions.R")
 source("hierarchical_clusterers.R")
 source("plot_dendrograms.R")
 source("gmapper_cover.R")
+source("gaussian_pdf_cover.R")
 source("width_balanced_cover.R")
 source("visualization.R")
 source("plot_histograms.R")
@@ -77,6 +78,12 @@ server <- function(input, output, session) {
       create_width_balanced_cover(
         min(lens), max(lens),
         input$num_patches, input$percent_overlap
+      )
+    } else if (input$cover_method == "Gaussian PDF") {
+      create_gaussian_pdf_cover(
+        lens,
+        n_components = input$n_components,
+        pdf_cutoff = input$pdf_cutoff,
       )
     } else {
       create_gmapper_cover(

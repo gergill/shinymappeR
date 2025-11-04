@@ -231,7 +231,7 @@ ui <- fluidPage(
         selectInput(
           "cover_method",
           "Covering Method:",
-          choices = c("Width-Balanced", "G‑Mapper"),
+          choices = c("Width-Balanced", "G‑Mapper", "Gaussian PDF"),
           selected = "Width-Balanced"
         ),
         conditionalPanel(
@@ -245,6 +245,18 @@ ui <- fluidPage(
           sliderInput("ad_threshold", "A–D threshold:", 0.1, 100, 0.5, step = 0.1),
           sliderInput("g_overlap", "Gaussian overlap:", 0.05, 0.9, 0.3, step = 0.05),
           sliderInput("max_intervals", "Maximum number of intervals:", 5, 50, 10)
+        ),
+        conditionalPanel(
+          condition = "input.cover_method == 'Gaussian PDF'",
+          sliderInput("n_components", "Number of Gaussians:", 1, 10, 3),
+          sliderInput(
+            "pdf_cutoff",
+            "PDF threshold:",
+            min = 0.001,
+            max = 1.0,
+            value = 0.10,
+            step = 0.001
+          )
         )
       ),
 
