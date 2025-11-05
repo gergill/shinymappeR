@@ -12,6 +12,9 @@ gaussian_pdf_cover <- function(
       Mclust(lens, G = 1)
     }
   )
+  # TODO implement gmm$z with a threshold on rows 
+  # to assign elements to gmm component clusters
+    # DOCS: https://www.rdocumentation.org/packages/mclust/versions/6.1/topics/Mclust
   
   if (is.null(gmm)) {
     # Fallback: return single interval
