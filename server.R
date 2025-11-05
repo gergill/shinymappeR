@@ -6,11 +6,13 @@ source("dataset_generation.R")
 source("lens_functions.R")
 source("hierarchical_clusterers.R")
 source("plot_dendrograms.R")
+source("cover_utils.R")
 source("gmapper_cover.R")
 source("gaussian_pdf_cover.R")
 source("width_balanced_cover.R")
 source("visualization.R")
 source("plot_histograms.R")
+source("mapper_wrapper.R")
 
 server <- function(input, output, session) {
   # --- Dataset Parameter UI -----------------------------------------
@@ -74,16 +76,17 @@ server <- function(input, output, session) {
   # --- Reactive: Cover ------------------------------------------------------
   cover <- reactive({
     lens <- filtered_data()
-    if (input$cover_method == "Width-Balanced") {
+    cov <- if (input$cover_method == "Width-Balanced") {
       create_width_balanced_cover(
         min(lens), max(lens),
-        input$num_patches, input$percent_overlap
+        input$num_patches, input$percent_overlap,
+        use_union_format = TRUE
       )
     } else if (input$cover_method == "Gaussian PDF") {
       create_gaussian_pdf_cover(
         lens,
         n_components = input$n_components,
-        pdf_cutoff = input$pdf_cutoff,
+        pdf_cutoff = input$pdf_cutoff
       )
     } else {
       create_gmapper_cover(
@@ -94,6 +97,13 @@ server <- function(input, output, session) {
         g_overlap = input$g_overlap
       )
     }
+    
+    # Ensure union format
+    if (!is_union_cover(cov)) {
+      cov <- convert_to_union_cover(cov)
+    }
+    
+    cov
   })
 
   # --- Reactive: Clusterer --------------------------------------------------
@@ -107,7 +117,8 @@ server <- function(input, output, session) {
 
   # --- Reactive: Mapper Object ---------------------------------------------
   mapper <- reactive({
-    create_1D_mapper_object(
+    # Use the union-aware mapper function
+    create_1D_mapper_object_union(
       data(),
       dist(data()),
       filtered_data(),
@@ -117,25 +128,17 @@ server <- function(input, output, session) {
   })
 
   # --- Update Display Patch Slider -----------------------------------------
-  observeEvent(list(input$cover_method, input$num_patches, cover()), {
-    if (input$cover_method == "Width-Balanced") {
-      updateSliderInput(
-        session,
-        "display_patch",
-        max = input$num_patches,
-        value = min(input$display_patch, input$num_patches),
-        step = 1
-      )
-    } else if (input$cover_method %in% c("G-Mapper", "G‑Mapper")) {
-      n_cov <- tryCatch(nrow(cover()), error = function(e) 1)
-      updateSliderInput(
-        session,
-        "display_patch",
-        max = n_cov,
-        value = min(input$display_patch, n_cov),
-        step = 1
-      )
-    }
+  observeEvent(cover(), {
+    cov <- cover()
+    n_elements <- if (is_union_cover(cov)) length(cov) else nrow(cov)
+    
+    updateSliderInput(
+      session,
+      "display_patch",
+      max = n_elements,
+      value = min(input$display_patch, n_elements),
+      step = 1
+    )
   })
 
   # ------------------------------------------------------------------
