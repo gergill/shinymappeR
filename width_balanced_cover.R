@@ -1,6 +1,9 @@
+source("cover_utils.R")
+
 create_width_balanced_cover <- function(min_val, max_val,
                                         num_patches = 10,
-                                        percent_overlap = 25) {
+                                        percent_overlap = 25,
+                                        use_union_format = TRUE) {
   stopifnot(
     is.numeric(min_val),
     is.numeric(max_val),
@@ -16,10 +19,7 @@ create_width_balanced_cover <- function(min_val, max_val,
 
   overlap_half <- overlap_frac * base_width / 2
 
-  intervals <- matrix(NA, nrow = num_patches, ncol = 2)
-  colnames(intervals) <- c("lower", "upper")
-
-  for (i in seq_len(num_patches)) {
+  elements <- lapply(seq_len(num_patches), function(i) {
     left_base <- min_val + (i - 1) * base_width
     right_base <- min_val + i * base_width
 
@@ -30,8 +30,15 @@ create_width_balanced_cover <- function(min_val, max_val,
     lower <- max(lower, min_val)
     upper <- min(upper, max_val)
 
-    intervals[i, ] <- c(lower, upper)
-  }
+    matrix(c(lower, upper), nrow = 1, ncol = 2)
+  })
 
-  return(as.data.frame(intervals))
+  if (use_union_format) {
+    return(create_cover(elements))
+  } else {
+    # Backward compatibility: return as matrix
+    intervals <- do.call(rbind, elements)
+    colnames(intervals) <- c("lower", "upper")
+    return(as.data.frame(intervals))
+  }
 }
