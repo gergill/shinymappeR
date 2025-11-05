@@ -86,7 +86,8 @@ server <- function(input, output, session) {
       create_gaussian_pdf_cover(
         lens,
         n_components = input$n_components,
-        pdf_cutoff = input$pdf_cutoff
+        z_threshold = input$z_threshold,
+        min_interval_size = input$min_interval_size
       )
     } else {
       create_gmapper_cover(

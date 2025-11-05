@@ -250,12 +250,24 @@ ui <- fluidPage(
           condition = "input.cover_method == 'Gaussian PDF'",
           sliderInput("n_components", "Number of Gaussians:", 1, 10, 3),
           sliderInput(
-            "pdf_cutoff",
-            "PDF threshold:",
-            min = 0.001,
-            max = 1.0,
-            value = 0.10,
-            step = 0.001
+            "z_threshold",
+            "Responsibility threshold:",
+            min = 0.01,
+            max = 0.95,
+            value = 0.30,
+            step = 0.01
+          ),
+          sliderInput(
+            "min_interval_size",
+            "Minimum points per interval:",
+            min = 1,
+            max = 50,
+            value = 8,
+            step = 1
+          ),
+          helpText(
+            "Responsibility threshold: minimum posterior probability for a ",
+            "point to belong to a component. Higher values create stricter covers."
           )
         )
       ),

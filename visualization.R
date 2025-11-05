@@ -45,7 +45,7 @@ plot_mapper_cover_splits <- function(cov, lens_values = NULL, bins = 30) {
   x_padding <- diff(x_range) * 0.05
   plot(x_range + c(-x_padding, x_padding), c(0, n_elements + 1),
     type = "n", xlab = "Lens Values", ylab = "Element Index",
-    main = "Mapper Cover Elements (with Unions)", axes = TRUE
+    main = "Mapper Cover Elements", axes = TRUE
   )
 
   abline(h = 1:n_elements, col = "lightgray", lty = 3, lwd = 0.5)
