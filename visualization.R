@@ -1,5 +1,6 @@
 library(viridis)
 library(RColorBrewer)
+source("cover_utils.R")
 
 # --- Filtered Data Plot ------------------------------------
 plot_filtered_data <- function(df, vals) {
@@ -15,58 +16,75 @@ plot_mapper_graph <- function(mapper_obj) {
 
 # --- Mapper Cover Splits Line Plot -------------------------
 plot_mapper_cover_splits <- function(cov, lens_values = NULL, bins = 30) {
-  if (is.null(cov) || nrow(cov) == 0) {
+  # Convert to union format if needed
+  if (!is_union_cover(cov)) {
+    cov <- convert_to_union_cover(cov)
+  }
+  
+  if (length(cov) == 0) {
     plot(1, 1,
-      type = "n", xlab = "Lens Values", ylab = "Intervals",
-      main = "No cover intervals to display"
+      type = "n", xlab = "Lens Values", ylab = "Elements",
+      main = "No cover elements to display"
     )
     return()
   }
 
-  n_cov <- nrow(cov)
-  cov_colors <- viridis::viridis(n_cov, alpha = 0.7, option = "D")
+  n_elements <- length(cov)
+  cov_colors <- viridis::viridis(n_elements, alpha = 0.7, option = "D")
 
-  # Use the same x-range logic as the GMM histogram
+  # Calculate x-range
   if (!is.null(lens_values)) {
     lens_values <- na.omit(lens_values)
     h <- hist(lens_values, breaks = bins, plot = FALSE)
     x_range <- c(min(h$breaks), max(h$breaks))
   } else {
-    x_range <- range(cov)
+    all_bounds <- do.call(rbind, cov)
+    x_range <- range(all_bounds)
   }
 
-  # Set up the plot area with matching dimensions
   x_padding <- diff(x_range) * 0.05
-  plot(x_range + c(-x_padding, x_padding), c(0, n_cov + 1),
-    type = "n", xlab = "Lens Values", ylab = "Interval Index",
-    main = "Mapper Cover Splits", axes = TRUE
+  plot(x_range + c(-x_padding, x_padding), c(0, n_elements + 1),
+    type = "n", xlab = "Lens Values", ylab = "Element Index",
+    main = "Mapper Cover Elements (with Unions)", axes = TRUE
   )
 
-  # Add grid for better readability
-  abline(h = 1:n_cov, col = "lightgray", lty = 3, lwd = 0.5)
+  abline(h = 1:n_elements, col = "lightgray", lty = 3, lwd = 0.5)
 
-  # Plot each interval as a rectangle with offset height
   rect_height <- 0.6
-  for (i in seq_len(n_cov)) {
-    y_bottom <- i - rect_height / 2
-    y_top <- i + rect_height / 2
+  for (i in seq_len(n_elements)) {
+    element <- cov[[i]]
+    n_intervals <- nrow(element)
+    
+    for (j in seq_len(n_intervals)) {
+      y_bottom <- i - rect_height / 2
+      y_top <- i + rect_height / 2
+      
+      # Different style for union elements
+      border_lwd <- if (n_intervals > 1) 2 else 1
+      border_lty <- if (n_intervals > 1) 1 else 1
 
-    # Draw rectangle for this interval
-    rect(cov[i, 1], y_bottom, cov[i, 2], y_top,
-      col = cov_colors[i],
-      border = "black",
-      lwd = 1.2
-    )
+      rect(element[j, 1], y_bottom, element[j, 2], y_top,
+        col = cov_colors[i],
+        border = "black",
+        lwd = border_lwd,
+        lty = border_lty
+      )
+    }
 
-    # Add interval label
-    text(mean(cov[i, ]), i,
-      labels = paste0("I", i),
+    # Label
+    mid_point <- mean(element[, 1:2])
+    label_text <- if (n_intervals > 1) {
+      paste0("E", i, " (", n_intervals, ")")
+    } else {
+      paste0("E", i)
+    }
+    text(mid_point, i,
+      labels = label_text,
       cex = 0.8, col = "white", font = 2
     )
   }
 
-
-  # Add range information as text
+  # Range info
   if (!is.null(lens_values)) {
     mtext(
       paste(
@@ -75,10 +93,11 @@ plot_mapper_cover_splits <- function(cov, lens_values = NULL, bins = 30) {
       ),
       side = 1, line = 3, cex = 0.8, col = "darkgray"
     )
+    all_bounds <- do.call(rbind, cov)
     mtext(
       paste(
-        "Cover range: [", round(min(cov), 3), ",",
-        round(max(cov), 3), "]"
+        "Cover range: [", round(min(all_bounds), 3), ",",
+        round(max(all_bounds), 3), "]"
       ),
       side = 1, line = 4, cex = 0.8, col = "darkblue"
     )
@@ -87,6 +106,11 @@ plot_mapper_cover_splits <- function(cov, lens_values = NULL, bins = 30) {
 
 # --- Staggered Data + Cover Visualization ------------------
 plot_staggered_data <- function(df, cov, lens_obj, input, filtered_vals) {
+  # Convert to union format if needed
+  if (!is_union_cover(cov)) {
+    cov <- convert_to_union_cover(cov)
+  }
+  
   plot(
     df,
     asp = 1, pch = 20, col = "grey",
@@ -95,50 +119,66 @@ plot_staggered_data <- function(df, cov, lens_obj, input, filtered_vals) {
   )
 
   if (lens_obj$projection) {
-    n_cov <- nrow(cov)
-    cov_colors <- viridis::viridis(n_cov, alpha = 0.35, option = "D")
+    n_elements <- length(cov)
+    cov_colors <- viridis::viridis(n_elements, alpha = 0.35, option = "D")
 
     if (input$lens == "project to x") {
-      for (i in seq_len(n_cov)) {
-        lty_style <- ifelse(i %% 2 == 0, 2, 1)
-        rect(
-          cov[i, 1], min(df$y), cov[i, 2], max(df$y),
-          col = cov_colors[i],
-          border = "black",
-          lty = lty_style
-        )
+      for (i in seq_len(n_elements)) {
+        element <- cov[[i]]
+        for (j in seq_len(nrow(element))) {
+          lty_style <- if (nrow(element) > 1) 1 else (if (i %% 2 == 0) 2 else 1)
+          lwd_style <- if (nrow(element) > 1) 2 else 1
+          rect(
+            element[j, 1], min(df$y), element[j, 2], max(df$y),
+            col = cov_colors[i],
+            border = "black",
+            lty = lty_style,
+            lwd = lwd_style
+          )
+        }
       }
     } else if (input$lens == "project to y") {
-      for (i in seq_len(n_cov)) {
-        lty_style <- ifelse(i %% 2 == 0, 2, 1)
-        rect(
-          min(df$x), cov[i, 1], max(df$x), cov[i, 2],
-          col = cov_colors[i],
-          border = "black",
-          lty = lty_style
-        )
+      for (i in seq_len(n_elements)) {
+        element <- cov[[i]]
+        for (j in seq_len(nrow(element))) {
+          lty_style <- if (nrow(element) > 1) 1 else (if (i %% 2 == 0) 2 else 1)
+          lwd_style <- if (nrow(element) > 1) 2 else 1
+          rect(
+            min(df$x), element[j, 1], max(df$x), element[j, 2],
+            col = cov_colors[i],
+            border = "black",
+            lty = lty_style,
+            lwd = lwd_style
+          )
+        }
       }
     } else if (input$lens == "theta lens") {
       pinfo <- lens_obj$projection_fn(df, input$theta)
       pvec <- pinfo$vector / sqrt(sum(pinfo$vector^2))
       perp <- c(-pvec[2], pvec[1]) / sqrt(sum(pvec^2))
 
-      for (i in seq_len(n_cov)) {
-        lty_style <- ifelse(i %% 2 == 0, 2, 1)
-        cut1 <- pinfo$point + cov[i, 1] * pvec
-        cut2 <- pinfo$point + cov[i, 2] * pvec
-        rect_coords <- rbind(
-          cut1 + 100 * perp,
-          cut1 - 100 * perp,
-          cut2 - 100 * perp,
-          cut2 + 100 * perp
-        )
-        polygon(
-          rect_coords[, 1], rect_coords[, 2],
-          col = cov_colors[i],
-          border = "black",
-          lty = lty_style
-        )
+      for (i in seq_len(n_elements)) {
+        element <- cov[[i]]
+        for (j in seq_len(nrow(element))) {
+          lty_style <- if (nrow(element) > 1) 1 else (if (i %% 2 == 0) 2 else 1)
+          lwd_style <- if (nrow(element) > 1) 2 else 1
+          
+          cut1 <- pinfo$point + element[j, 1] * pvec
+          cut2 <- pinfo$point + element[j, 2] * pvec
+          rect_coords <- rbind(
+            cut1 + 100 * perp,
+            cut1 - 100 * perp,
+            cut2 - 100 * perp,
+            cut2 + 100 * perp
+          )
+          polygon(
+            rect_coords[, 1], rect_coords[, 2],
+            col = cov_colors[i],
+            border = "black",
+            lty = lty_style,
+            lwd = lwd_style
+          )
+        }
       }
     } else if (grepl("PCA", input$lens)) {
       pinfo <- lens_obj$projection_fn(df)
@@ -147,22 +187,28 @@ plot_staggered_data <- function(df, cov, lens_obj, input, filtered_vals) {
       abline(a = 0, b = slope, col = "darkgreen", lwd = 3, lty = 3)
       perp <- c(-pvec[2], pvec[1]) / sqrt(sum(pvec^2))
 
-      for (i in seq_len(n_cov)) {
-        lty_style <- ifelse(i %% 2 == 0, 2, 1)
-        cut1 <- cov[i, 1] * pvec
-        cut2 <- cov[i, 2] * pvec
-        rect_coords <- rbind(
-          cut1 + 100 * perp,
-          cut1 - 100 * perp,
-          cut2 - 100 * perp,
-          cut2 + 100 * perp
-        )
-        polygon(
-          rect_coords[, 1], rect_coords[, 2],
-          col = cov_colors[i],
-          border = "black",
-          lty = lty_style
-        )
+      for (i in seq_len(n_elements)) {
+        element <- cov[[i]]
+        for (j in seq_len(nrow(element))) {
+          lty_style <- if (nrow(element) > 1) 1 else (if (i %% 2 == 0) 2 else 1)
+          lwd_style <- if (nrow(element) > 1) 2 else 1
+          
+          cut1 <- element[j, 1] * pvec
+          cut2 <- element[j, 2] * pvec
+          rect_coords <- rbind(
+            cut1 + 100 * perp,
+            cut1 - 100 * perp,
+            cut2 - 100 * perp,
+            cut2 + 100 * perp
+          )
+          polygon(
+            rect_coords[, 1], rect_coords[, 2],
+            col = cov_colors[i],
+            border = "black",
+            lty = lty_style,
+            lwd = lwd_style
+          )
+        }
       }
     }
   } else {
