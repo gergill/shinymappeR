@@ -1,4 +1,5 @@
 library(mclust)
+source("cover_utils.R")
 
 gaussian_pdf_cover <- function(
     lens, n_components = 3, pdf_cutoff = 0.01, 
@@ -12,13 +13,10 @@ gaussian_pdf_cover <- function(
       Mclust(lens, G = 1)
     }
   )
-  # TODO implement gmm$z with a threshold on rows 
-  # to assign elements to gmm component clusters
-    # DOCS: https://www.rdocumentation.org/packages/mclust/versions/6.1/topics/Mclust
   
   if (is.null(gmm)) {
     # Fallback: return single interval
-    return(matrix(c(min(lens), max(lens)), nrow = 1))
+    return(create_cover(list(matrix(c(min(lens), max(lens)), nrow = 1, ncol = 2))))
   }
   
   means <- as.numeric(gmm$parameters$mean)
@@ -56,14 +54,7 @@ gaussian_pdf_cover <- function(
     # Threshold density
     threshold_density <- peak_density * pdf_cutoff
     
-    # Find where density equals threshold
-    # For a Gaussian: density(x) = mix * (1/sqrt(2*pi*sd^2)) * exp(-0.5*((x-mean)/sd)^2)
-    # We want: mix * (1/sqrt(2*pi*sd^2)) * exp(-0.5*((x-mean)/sd)^2) = threshold
-    # Solving: exp(-0.5*((x-mean)/sd)^2) = threshold / (mix/(sqrt(2*pi*sd^2)))
-    # -0.5*((x-mean)/sd)^2 = log(threshold * sqrt(2*pi*sd^2) / mix)
-    
     if (threshold_density <= 0 || threshold_density >= peak_density) {
-      # Invalid threshold, skip this component
       next
     }
     
@@ -94,16 +85,15 @@ gaussian_pdf_cover <- function(
   # If no valid intervals, return full range
   if (length(intervals) == 0) {
     cat("No valid intervals found, returning full range\n")
-    return(matrix(c(min(lens), max(lens)), nrow = 1))
+    return(create_cover(list(matrix(c(min(lens), max(lens)), nrow = 1, ncol = 2))))
   }
   
-  # create cover matrix
-  cover_matrix <- do.call(rbind, intervals)
+  # Convert to union cover format - each interval becomes its own element
+  elements <- lapply(intervals, function(iv) {
+    matrix(c(iv[1], iv[2]), nrow = 1, ncol = 2)
+  })
   
-  # sort by lower bound
-  cover_matrix <- cover_matrix[order(cover_matrix[, 1]), , drop = FALSE]
-  
-  return(cover_matrix)
+  return(create_cover(elements))
 }
 
 create_gaussian_pdf_cover <- function(
