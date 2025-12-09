@@ -456,6 +456,7 @@ server <- function(input, output, session) {
     # plot data
     plot(data,
          xlim = c(min(data$x), max(data$x)),
+         ylim = c(min(data$y) - ifelse(input$lens == "project to y", 0, stagger_value), max(data$y) + ifelse(input$lens == "project to y", 0, stagger_value)),
          pch = 20,
          asp = 1)
 
