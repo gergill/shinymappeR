@@ -6,8 +6,15 @@
 #    https://shiny.posit.co/
 #
 
-library(shiny)
-library(mappeR)
+checkload = function(lib) {
+  if(!require(lib, character.only = TRUE)) {
+    install.packages(lib)
+  }
+  library(lib, character.only = TRUE)
+}
+
+invisible(lapply(c("ggplot2", "shiny", "mappeR", "mclust", "nortest"), checkload))
+
 source("dataset_generation.R")
 source("lens_functions.R")
 source("hierarchical_clusterers.R")
