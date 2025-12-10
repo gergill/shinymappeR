@@ -6,8 +6,15 @@
 #    https://shiny.posit.co/
 #
 
-library(shiny)
-library(mappeR)
+checkload = function(lib) {
+  if(!require(lib, character.only = TRUE)) {
+    install.packages(lib)
+  }
+  library(lib, character.only = TRUE)
+}
+
+invisible(lapply(c("ggplot2", "shiny", "mappeR", "mclust", "nortest"), checkload))
+
 source("dataset_generation.R")
 source("lens_functions.R")
 source("hierarchical_clusterers.R")
@@ -442,26 +449,30 @@ server <- function(input, output, session) {
   output$staggered_data <- renderPlot({
     data = data()
     cover = cover()
+    
+    stagger_amount = .1 # change this to make the bars go longer
+    stagger_value = stagger_amount*(max(data$y) - min(data$y))
 
     # plot data
     plot(data,
          xlim = c(min(data$x), max(data$x)),
+         ylim = c(min(data$y) - ifelse(input$lens == "project to y", 0, stagger_value), max(data$y) + ifelse(input$lens == "project to y", 0, stagger_value)),
          pch = 20,
          asp = 1)
 
     # plot overlaying patches depending on lens (and cover)
     if (input$lens == "project to x") {
       rect(cover[, 1],
-           min(data$y),
+           min(data$y) - stagger_value*rep(c(1, 0), ncol(cover))[1:ncol(cover)],
            cover[, 2],
-           max(data$y),
+           max(data$y) + stagger_value*rep(c(0, 1), ncol(cover))[1:ncol(cover)],
            col = color_gradient(input$num_patches, .5))
     } else if (input$lens == "project to y") {
-      rect(min(data$x),
-           cover[, 2],
-           max(data$x),
-           cover[, 1],
-           col = color_gradient(input$num_patches, .5))
+        rect(min(data$x) - stagger_value*rep(c(1, 0), ncol(cover))[1:ncol(cover)],
+             cover[, 2],
+             max(data$x) + stagger_value*rep(c(0, 1), ncol(cover))[1:ncol(cover)],
+             cover[, 1],
+             col = color_gradient(input$num_patches, .5))
     } else if (input$lens == "PCA-1") { # this code for PCA rectangles from Jacob Miller
         # draw PCA line
         pca_output <- prcomp(data, center = FALSE, scale. = FALSE)
