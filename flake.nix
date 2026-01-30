@@ -64,7 +64,6 @@
             buildInputs = with pkgs; [
               rEnv
               texlive
-              R
               pkg-config
               zlib.dev
               openssl.dev
@@ -75,6 +74,7 @@
             ];
 
             shellHook = ''
+              export R_LIBS_USER=""
               echo "Entering R dev environment for ${system}..."
               echo "R: $(R --version | head -n 1)"
               echo "LaTeX: $(which pdflatex)"

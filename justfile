@@ -39,7 +39,7 @@ lint:
 
 # Start shinymapper app
 app:
-    R -e "shiny::runApp('app.R', host='0.0.0.0', port=3838)" 2>&1 | tee app.log
+    R -e "shiny::runApp('app.R')" 2>&1
 
 # Test the code
 test:
