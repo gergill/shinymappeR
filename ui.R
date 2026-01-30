@@ -21,7 +21,7 @@ body, html {
 
 /* Left Panel: Parameter Controls --------------------------------*/
 #left-panel {
-  flex: 0 0 28%;
+  flex: 0 0 22%;
   background-color: #f8f9fa;
   border-right: 2px solid #d0d0d0;
   padding: 20px 24px;
@@ -124,13 +124,14 @@ body, html {
   background-color: #ffffff;
   border: 1px solid #ccc;
   border-radius: 8px;
-  padding: 16px;
-  margin-bottom: 16px;
+  padding: 8px;
+  margin-top: 0px;
+  margin-bottom: 0px;
   box-shadow: 0 1px 2px rgba(0,0,0,0.05);
 }
 .param-section h4 {
   font-size: 18px;
-  margin-top: 0;
+  margin-top: 0px;
   color: #2a2a2a;
 }
 
@@ -186,38 +187,42 @@ ui <- fluidPage(
     # --- Left Panel -------------------------------------------
     div(
       id = "left-panel",
-      h3("1D Mapper Parameters"),
+      h1("ShinyMappeR"),
+      hr(),
+
 
       # Dataset section
+      h3("Dataset"),
       div(
         class = "param-section",
-        h4("Dataset"),
-        fileInput(
-          "upload",
-          "Upload CSV dataset:",
-          accept = c(".csv", "text/csv", "text/plain")
-        ),
-        checkboxInput("header", "CSV has header", TRUE),
-        helpText(
-          "Upload a two-column CSV file (x and y). ",
-          "If no file is uploaded, a built-in dataset generator is used."
-        ),
+
         selectInput(
           "data",
           "Example Dataset:",
           choices = names(dataset_registry),
           selected = "circle"
         ),
-        uiOutput("dynamic_dataset_ui")
+        uiOutput("dynamic_dataset_ui"),
+        hr(),
+        fileInput(
+          "upload",
+          "Upload CSV:",
+          accept = c(".csv", "text/csv", "text/plain")
+          ),
+        checkboxInput("header", "CSV has header", TRUE),
+        helpText(
+          "Upload a two-column CSV file (x and y). ",
+          "If no file is uploaded, the example dataset is used."
+          )
       ),
 
       # Lens section
+      h3("Lens Function"),
       div(
         class = "param-section",
-        h4("Lens Function"),
         selectInput(
           "lens",
-          "Lens Function:",
+          "",
           choices = names(lens_registry),
           selected = "project to x"
         ),
@@ -225,12 +230,12 @@ ui <- fluidPage(
       ),
 
       # Cover method section
+      h3("Covering Method"),
       div(
         class = "param-section",
-        h4("Covering Method"),
         selectInput(
           "cover_method",
-          "Covering Method:",
+          "",
           choices = c("Width-Balanced", "G‑Mapper", "Gaussian PDF"),
           selected = "Width-Balanced"
         ),
@@ -272,13 +277,10 @@ ui <- fluidPage(
         )
       ),
 
-      # Clustering / Display section
+      # Clustering
+      h3("Clusterer"),
       div(
         class = "param-section",
-        h4("Clustering / Display"),
-        sliderInput("display_patch", "Patch to display:",
-          value = 1, min = 1, max = 2
-        ),
         selectInput(
           "method",
           "Linkage method:",
@@ -299,11 +301,10 @@ ui <- fluidPage(
         id = "viz-tabs",
         type = "tabs",
 
-        # --- Single Visualization Tab ---------------------------
         tabPanel(
-          "Visualization",
+          "Global View",
 
-          # 1. Original Data
+          # Original Data
           div(
             class = "viz-card",
             h4("Original Data"),
@@ -314,7 +315,7 @@ ui <- fluidPage(
             )
           ),
 
-          # 2. Mapper Graph
+          # Mapper Graph
           div(
             class = "viz-card",
             h4("Mapper Graph"),
@@ -324,7 +325,7 @@ ui <- fluidPage(
             )
           ),
 
-          # 3. Global View
+          # Global View
           div(
             class = "viz-card",
             h4("Global View"),
@@ -343,7 +344,7 @@ ui <- fluidPage(
             )
           ),
 
-          # 4. Cover Visualization
+          # Cover Visualization
           div(
             class = "viz-card",
             h4("Cover Visualization"),
@@ -353,33 +354,42 @@ ui <- fluidPage(
             )
           ),
 
-          # 5. Patch View
+        ),
+        tabPanel(
+          "Local View",
+          # Patch Selection
+          div(
+            class = "param-section",
+            sliderInput("display_patch", "Patch to display:",
+              value = 1, min = 1, max = 2
+              ),
+            ),
+          # Local Dendogram
           div(
             class = "viz-card",
             h4("Patch View (Local Dendrogram)"),
             div(
               class = "plot-container",
               plotOutput("patch_view", height = "300px")
-            )
-          ),
-          div(
-            class = "viz-card",
-            h4("Patch Histogram"),
-            div(
-              class = "plot-container",
-              plotOutput("patch_histogram", height = "300px")
-            )
-          ),
-
-          # 6. Cluster View
+              )
+            ),
+          # Patch View
           div(
             class = "viz-card",
             h4("Cluster View"),
             div(
               class = "plot-container",
               plotOutput("cluster_histograms", height = "600px")
-            )
-          )
+              ),
+            ),
+          div(
+            class = "viz-card",
+            h4("Patch Histogram"),
+            div(
+              class = "plot-container",
+              plotOutput("patch_histogram", height = "300px")
+              )
+            ),
         )
       )
     )

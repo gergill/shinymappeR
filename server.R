@@ -56,9 +56,9 @@ server <- function(input, output, session) {
 
   output$data_source <- renderText({
     if (!is.null(input$upload)) {
-      paste("Using uploaded dataset:", input$upload$name)
+      paste("Uploaded dataset:", input$upload$name)
     } else {
-      paste("Using built-in dataset:", input$data)
+      paste("Example dataset:", input$data)
     }
   })
 

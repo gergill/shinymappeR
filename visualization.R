@@ -86,17 +86,10 @@ plot_mapper_cover_splits <- function(cov, lens_values = NULL, bins = 30) {
 
   # Range info
   if (!is.null(lens_values)) {
-    mtext(
-      paste(
-        "Lens range: [", round(min(lens_values), 3), ",",
-        round(max(lens_values), 3), "]"
-      ),
-      side = 1, line = 3, cex = 0.8, col = "darkgray"
-    )
     all_bounds <- do.call(rbind, cov)
     mtext(
       paste(
-        "Cover range: [", round(min(all_bounds), 3), ",",
+        "Range: [", round(min(all_bounds), 3), ",",
         round(max(all_bounds), 3), "]"
       ),
       side = 1, line = 4, cex = 0.8, col = "darkblue"
