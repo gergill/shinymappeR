@@ -96,11 +96,17 @@ bfs_gmapper <- function(
     if (length(cover) >= max_intervals) break
 
     iter <- iter + 1
+
+    # sort by ad-score
+    ad_scores <- sapply(cover, function(iv) iv$ad_score)
+    sorted_indices <- order(ad_scores)
+
+
     new_cover <- list()
     splits_occurred <- FALSE
 
     # iterate through each interval
-    for (i in seq_along(cover)) {
+    for (i in sorted_indices) {
       interval <- cover[[i]]
 
       # if interval passes AD test (looks normal)
