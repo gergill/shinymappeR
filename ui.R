@@ -195,7 +195,6 @@ ui <- fluidPage(
       h3("Dataset"),
       div(
         class = "param-section",
-
         selectInput(
           "data",
           "Example Dataset:",
@@ -208,12 +207,12 @@ ui <- fluidPage(
           "upload",
           "Upload CSV:",
           accept = c(".csv", "text/csv", "text/plain")
-          ),
+        ),
         checkboxInput("header", "CSV has header", TRUE),
         helpText(
           "Upload a two-column CSV file (x and y). ",
           "If no file is uploaded, the example dataset is used."
-          )
+        )
       ),
 
       # Lens section
@@ -300,9 +299,8 @@ ui <- fluidPage(
       tabsetPanel(
         id = "viz-tabs",
         type = "tabs",
-
         tabPanel(
-          "Global View",
+          "Global",
 
           # Original Data
           div(
@@ -328,7 +326,7 @@ ui <- fluidPage(
           # Global View
           div(
             class = "viz-card",
-            h4("Global View"),
+            h4("Global Dendrogram"),
             div(
               class = "plot-container",
               plotOutput("global_view", height = "300px")
@@ -340,30 +338,18 @@ ui <- fluidPage(
             div(
               class = "plot-container",
               plotOutput("global_histogram", height = "900px"),
-              plotOutput("mapper_cover_splits", height = "300px")
-            )
+            ),
           ),
-
-          # Cover Visualization
-          div(
-            class = "viz-card",
-            h4("Cover Visualization"),
-            div(
-              class = "plot-container",
-              plotOutput("staggered_data", height = "300px")
-            )
-          ),
-
         ),
         tabPanel(
-          "Local View",
+          "Local",
           # Patch Selection
           div(
             class = "param-section",
             sliderInput("display_patch", "Patch to display:",
               value = 1, min = 1, max = 2
-              ),
             ),
+          ),
           # Local Dendogram
           div(
             class = "viz-card",
@@ -371,8 +357,8 @@ ui <- fluidPage(
             div(
               class = "plot-container",
               plotOutput("patch_view", height = "300px")
-              )
-            ),
+            )
+          ),
           # Patch View
           div(
             class = "viz-card",
@@ -380,16 +366,29 @@ ui <- fluidPage(
             div(
               class = "plot-container",
               plotOutput("cluster_histograms", height = "600px")
-              ),
             ),
+          ),
           div(
             class = "viz-card",
             h4("Patch Histogram"),
             div(
               class = "plot-container",
               plotOutput("patch_histogram", height = "300px")
-              )
-            ),
+            )
+          ),
+        ),
+        tabPanel(
+          "Cover",
+          div(
+            class = "viz-card",
+            h4("Cover Visualization"),
+            div(
+              class = "plot-container",
+              plotOutput("cover_histogram", height = "600px"),
+              plotOutput("mapper_cover_splits", height = "300px"),
+              plotOutput("staggered_data", height = "300px")
+            )
+          ),
         )
       )
     )

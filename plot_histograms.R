@@ -11,9 +11,9 @@ library(ggplot2)
 }
 
 # -------------------------------------------------------------------
-# GLOBAL histogram of lens values + single normal fit
+# GLOBAL histogram of lens values + GMM fit
 # -------------------------------------------------------------------
-plot_global_histogram <- function(lens_values, G = NULL, bins = 50, emphasize = TRUE) {
+plot_global_histogram <- function(lens_values, n_components = NULL, bins = 50) {
   library(ggplot2)
   library(mclust)
   library(dplyr)
@@ -21,36 +21,38 @@ plot_global_histogram <- function(lens_values, G = NULL, bins = 50, emphasize = 
 
   lens_values <- na.omit(lens_values)
   if (length(lens_values) < 2) {
-    return(ggplot() +
-      ggtitle("Not enough data for GMM fit."))
+    return(list(
+      plot = ggplot() +
+        ggtitle("Not enough data for GMM fit."),
+      xlim = c(NA, NA)
+    ))
   }
 
-  # Fit GMM (auto-select if G = NULL)
-  gmm_fit <- Mclust(lens_values, G = G)
+  G_to_use <- if (is.null(n_components)) NULL else n_components
 
-  # Extract parameters more robustly
-  means <- gmm_fit$parameters$mean
-  probs <- gmm_fit$parameters$pro
-  n_comp <- gmm_fit$G
+  # Fit optimal GMM (auto-select number of components)
+  gmm_fit_optimal <- Mclust(lens_values, G = G_to_use)
 
-  # Handle variance extraction based on model type
-  if (n_comp == 1) {
-    sds <- sqrt(gmm_fit$parameters$variance$sigmasq)
+  # Extract parameters for optimal model
+  means_optimal <- gmm_fit_optimal$parameters$mean
+  probs_optimal <- gmm_fit_optimal$parameters$pro
+  n_comp_optimal <- gmm_fit_optimal$G
+
+  # Handle variance extraction for optimal model
+  if (n_comp_optimal == 1) {
+    sds_optimal <- sqrt(gmm_fit_optimal$parameters$variance$sigmasq)
   } else {
-    # For multicomponent models, variance structure may differ
-    if (is.matrix(gmm_fit$parameters$variance$sigmasq)) {
-      sds <- sqrt(diag(gmm_fit$parameters$variance$sigmasq))
-    } else if (is.vector(gmm_fit$parameters$variance$sigmasq)) {
-      sds <- sqrt(gmm_fit$parameters$variance$sigmasq)
+    if (is.matrix(gmm_fit_optimal$parameters$variance$sigmasq)) {
+      sds_optimal <- sqrt(diag(gmm_fit_optimal$parameters$variance$sigmasq))
+    } else if (is.vector(gmm_fit_optimal$parameters$variance$sigmasq)) {
+      sds_optimal <- sqrt(gmm_fit_optimal$parameters$variance$sigmasq)
     } else {
-      # Fallback: extract from model predictions
-      sds <- rep(sqrt(gmm_fit$parameters$variance$sigmasq), n_comp)
+      sds_optimal <- rep(sqrt(gmm_fit_optimal$parameters$variance$sigmasq), n_comp_optimal)
     }
   }
 
-  # Ensure we have the right number of parameters
-  if (length(sds) == 1 && n_comp > 1) {
-    sds <- rep(sds, n_comp)
+  if (length(sds_optimal) == 1 && n_comp_optimal > 1) {
+    sds_optimal <- rep(sds_optimal, n_comp_optimal)
   }
 
   # Histogram data (for density calculation)
@@ -59,91 +61,156 @@ plot_global_histogram <- function(lens_values, G = NULL, bins = 50, emphasize = 
   xmin <- min(h$breaks)
   x_seq <- seq(xmin, xmax, length.out = 400)
 
+  # store x-lim to match up with other graphs
+  xlim <- c(xmin, xmax)
+
+  # --- OPTIMAL MODEL ---
   # Each GMM component density
-  component_df <- do.call(rbind, lapply(seq_len(n_comp), function(k) {
+  component_df_optimal <- do.call(rbind, lapply(seq_len(n_comp_optimal), function(k) {
     data.frame(
       lens = x_seq,
-      density = probs[k] * dnorm(x_seq, mean = means[k], sd = sds[k]),
+      density = probs_optimal[k] * dnorm(x_seq, mean = means_optimal[k], sd = sds_optimal[k]),
       component = paste0("Component ", k)
     )
   }))
 
   # Sum to get full mixture
-  mixture_density <- component_df %>%
+  mixture_density_optimal <- component_df_optimal %>%
     group_by(lens) %>%
     summarise(density = sum(density), .groups = "drop")
 
-  # Enhanced component visibility for bottom plot
-  component_df_display <- component_df
-  if (emphasize && n_comp > 1) {
-    # Scale components to be more visible in the bottom plot
-    mixture_max <- max(mixture_density$density)
-    component_df_display <- component_df %>%
-      group_by(component) %>%
-      mutate(
-        # Make sure components are at least 5% of mixture height
-        density = pmax(density, 0.05 * mixture_max)
-      )
-  }
+  # Calculate percentage contribution at each point
+  mixture_total_optimal <- component_df_optimal %>%
+    group_by(lens) %>%
+    summarize(total_density = sum(density), .groups = "drop")
 
-  # --- Top: histogram with mixture overlay ---
+  component_contrib_optimal <- component_df_optimal %>%
+    left_join(mixture_total_optimal, by = "lens") %>%
+    mutate(contrib = density / total_density) %>%
+    select(lens, contrib, component)
+
+  # --- Top: histogram with optimal GMM mixture overlay ---
   p_hist <- ggplot(data.frame(lens = lens_values), aes(x = lens)) +
     geom_histogram(
       aes(y = after_stat(density)),
       bins = bins,
-      fill = "#377eb8", color = "black", alpha = 0.6
+      fill = "#377eb8", color = "black", alpha = 0.35
     ) +
     geom_line(
-      data = mixture_density,
+      data = mixture_density_optimal,
       aes(x = lens, y = density),
-      color = "#e41a1c", linewidth = 1.5
+      color = "#010000", linewidth = 1.5, alpha = 0.75
+    ) +
+    geom_line(
+      data = component_df_optimal,
+      aes(x = lens, y = density, color = component),
+      linewidth = 1.0, linetype = "dashed", alpha = 1.0
     ) +
     theme_minimal(base_size = 14) +
+    theme(legend.position = "right") +
     labs(
       title = sprintf(
-        "Global Lens Histogram with GMM Fit (%d components)", n_comp
+        "Global Lens Histogram with Optimal GMM Fit (%d components)", n_comp_optimal
       ),
-      x = "Lens Value", y = "Density"
-    ) +
-    # Add legend for the mixture line
-    annotate("text",
-      x = Inf, y = Inf,
-      label = "— Mixture Model",
-      hjust = 1, vjust = 1, size = 3.5, color = "#e41a1c"
-    )
-
-  # --- Bottom: GMM components only ---
-  p_gmm <- ggplot() +
-    # geom_line(
-    #  data = mixture_density,
-    #  aes(x = lens, y = density),
-    #  color = "#e41a1c", linewidth = 1.2, alpha = 0.1
-    # ) +
-    geom_line(
-      data = component_df_display,
-      aes(x = lens, y = density, color = component),
-      linewidth = 1.0, linetype = "dashed"
-    ) +
-    theme_minimal(base_size = 14) +
-    theme(legend.position = "bottom") +
-    labs(
-      title = "Individual Gaussian Components",
       x = "Lens Value", y = "Density",
       color = "Component"
     ) +
-    # Add parameter annotations
     annotate("text",
       x = Inf, y = Inf,
       label = paste0(
-        "μ: ", paste(round(means, 3), collapse = ", "), "\n",
-        "σ: ", paste(round(sds, 3), collapse = ", "), "\n",
-        "w: ", paste(round(probs, 3), collapse = ", ")
+        "— Mixture Model\n",
+        "μ: ", paste(round(means_optimal, 3), collapse = ", "), "\n",
+        "σ: ", paste(round(sds_optimal, 3), collapse = ", "), "\n",
+        "w: ", paste(round(probs_optimal, 3), collapse = ", ")
       ),
-      hjust = 1, vjust = 1, size = 3, alpha = 0.8
+      hjust = 1, vjust = 1, size = 3.5, color = "#e41a1c"
     )
 
-  # Stack the two plots vertically using patchwork
-  p_hist / p_gmm + plot_layout(heights = c(2, 1.2))
+  # --- Bottom: Component contributions for n_components model (if specified) ---
+  if (!is.null(n_components) && is.numeric(n_components) && n_components > 0) {
+    gmm_fit_custom <- Mclust(lens_values, G = n_components)
+
+    means_custom <- gmm_fit_custom$parameters$mean
+    probs_custom <- gmm_fit_custom$parameters$pro
+    n_comp_custom <- gmm_fit_custom$G
+
+    # Handle variance extraction
+    if (n_comp_custom == 1) {
+      sds_custom <- sqrt(gmm_fit_custom$parameters$variance$sigmasq)
+    } else {
+      if (is.matrix(gmm_fit_custom$parameters$variance$sigmasq)) {
+        sds_custom <- sqrt(diag(gmm_fit_custom$parameters$variance$sigmasq))
+      } else if (is.vector(gmm_fit_custom$parameters$variance$sigmasq)) {
+        sds_custom <- sqrt(gmm_fit_custom$parameters$variance$sigmasq)
+      } else {
+        sds_custom <- rep(sqrt(gmm_fit_custom$parameters$variance$sigmasq), n_comp_custom)
+      }
+    }
+
+    if (length(sds_custom) == 1 && n_comp_custom > 1) {
+      sds_custom <- rep(sds_custom, n_comp_custom)
+    }
+
+    # Calculate component contributions for custom model
+    component_df_custom <- do.call(rbind, lapply(seq_len(n_comp_custom), function(k) {
+      comp_density <- probs_custom[k] * dnorm(x_seq, mean = means_custom[k], sd = sds_custom[k])
+      data.frame(
+        lens = x_seq,
+        density = comp_density,
+        component = paste0("Component ", k)
+      )
+    }))
+
+    mixture_total_custom <- component_df_custom %>%
+      group_by(lens) %>%
+      summarize(total_density = sum(density), .groups = "drop")
+
+    component_contrib_custom <- component_df_custom %>%
+      left_join(mixture_total_custom, by = "lens") %>%
+      mutate(contrib = density / total_density) %>%
+      select(lens, contrib, component)
+
+    p_contrib_custom <- ggplot() +
+      geom_line(
+        data = component_contrib_custom,
+        aes(x = lens, y = contrib, color = component),
+        linewidth = 1.0
+      ) +
+      theme_minimal(base_size = 14) +
+      theme(legend.position = "bottom") +
+      scale_y_continuous(labels = scales::percent) +
+      labs(
+        title = sprintf("Component Contributions - Custom Model (%d components)", n_comp_custom),
+        x = "Lens Value", y = "% Contribution",
+        color = "Component"
+      ) +
+      annotate("text",
+        x = Inf, y = Inf,
+        label = paste0(
+          "μ: ", paste(round(means_custom, 3), collapse = ", "), "\n",
+          "σ: ", paste(round(sds_custom, 3), collapse = ", "), "\n",
+          "w: ", paste(round(probs_custom, 3), collapse = ", ")
+        ),
+        hjust = 1, vjust = 1, size = 3, alpha = 0.8
+      )
+
+    # Extract colors from the custom model ggplot
+    component_colors <- ggplot_build(p_contrib_custom)$data[[1]]$colour
+    component_colors <- unique(component_colors)
+
+    # Stack all three plots
+    combined_plot <- p_hist / p_contrib_custom + plot_layout(heights = c(2, 1))
+  } else {
+    # Extract colors from the optimal model ggplot
+    component_colors <- ggplot_build(p_hist)$data[[3]]$colour
+    component_colors <- unique(component_colors)
+
+    # If n_components is NULL, only show optimal model plots
+    combined_plot <- p_hist + plot_layout(heights = c(2))
+  }
+
+  # return both the plot and xlim
+  list(plot = combined_plot, xlim = xlim, colors = component_colors)
 }
 
 # -------------------------------------------------------------------
@@ -213,7 +280,7 @@ plot_patch_histogram <- function(data, mapperobject, lens_values, display_patch)
 }
 
 # -------------------------------------------------------------------
-# 3) CLUSTER-level histograms
+# CLUSTER-level histograms
 # -------------------------------------------------------------------
 
 plot_cluster_histograms <- function(data, mapperobject, lens_values, display_patch = NULL) {

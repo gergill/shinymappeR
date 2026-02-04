@@ -158,11 +158,11 @@ create_gmapper_cover <- function(
     lens, iterations = 20, max_intervals = 10,
     ad_threshold = 0.5, g_overlap = 0.3) {
   cov <- bfs_gmapper(lens, iterations, max_intervals, ad_threshold, g_overlap)
-  
+
   # Convert to union cover format - each interval becomes its own element
   elements <- lapply(cov, function(iv) {
     matrix(c(iv$lower, iv$upper), nrow = 1, ncol = 2)
   })
-  
+
   return(create_cover(elements))
 }

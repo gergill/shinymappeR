@@ -6,11 +6,11 @@ create_cover_element <- function(intervals) {
   if (is.vector(intervals) && length(intervals) == 2) {
     intervals <- matrix(intervals, nrow = 1, ncol = 2)
   }
-  
+
   if (!is.matrix(intervals) || ncol(intervals) != 2) {
     stop("Intervals must be a 2-column matrix or a vector of length 2")
   }
-  
+
   colnames(intervals) <- c("lower", "upper")
   intervals
 }
@@ -23,7 +23,7 @@ create_cover <- function(elements) {
   if (!is.list(elements)) {
     stop("Elements must be a list")
   }
-  
+
   cover <- lapply(elements, create_cover_element)
   class(cover) <- c("union_cover", "list")
   cover
@@ -45,14 +45,14 @@ convert_to_union_cover <- function(old_cover) {
   if (is_union_cover(old_cover)) {
     return(old_cover)
   }
-  
+
   if (is.matrix(old_cover) || is.data.frame(old_cover)) {
     elements <- lapply(seq_len(nrow(old_cover)), function(i) {
       matrix(c(old_cover[i, 1], old_cover[i, 2]), nrow = 1, ncol = 2)
     })
     return(create_cover(elements))
   }
-  
+
   stop("Cannot convert cover to union format")
 }
 
@@ -68,7 +68,7 @@ convert_union_to_matrix <- function(union_cover, merge_mode = "bounds") {
     }
     stop("Input must be a union cover or matrix")
   }
-  
+
   intervals <- lapply(union_cover, function(element) {
     if (nrow(element) == 1) {
       # Single interval - return as is
@@ -86,7 +86,7 @@ convert_union_to_matrix <- function(union_cover, merge_mode = "bounds") {
       }
     }
   })
-  
+
   mat <- do.call(rbind, intervals)
   colnames(mat) <- c("lower", "upper")
   mat
@@ -152,8 +152,10 @@ print.union_cover <- function(x, ...) {
   for (i in seq_along(x)) {
     n_intervals <- nrow(x[[i]])
     if (n_intervals == 1) {
-      cat(sprintf("  Element %d: [%.3f, %.3f]\n", 
-                  i, x[[i]][1, 1], x[[i]][1, 2]))
+      cat(sprintf(
+        "  Element %d: [%.3f, %.3f]\n",
+        i, x[[i]][1, 1], x[[i]][1, 2]
+      ))
     } else {
       cat(sprintf("  Element %d: Union of %d intervals:\n", i, n_intervals))
       for (j in seq_len(n_intervals)) {

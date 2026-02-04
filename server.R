@@ -98,12 +98,12 @@ server <- function(input, output, session) {
         g_overlap = input$g_overlap
       )
     }
-    
+
     # Ensure union format
     if (!is_union_cover(cov)) {
       cov <- convert_to_union_cover(cov)
     }
-    
+
     cov
   })
 
@@ -128,11 +128,26 @@ server <- function(input, output, session) {
     )
   })
 
+  histogram_result <- reactive({
+    n_comp <- if (input$cover_method == "Gaussian PDF") {
+      input$n_components
+    } else {
+      NULL
+    }
+
+    plot_global_histogram(filtered_data(), n_components = n_comp)
+  })
+
+  # --- Reactive: Global Histogram Result which is actually static!
+  global_histogram_result <- reactive({
+    plot_global_histogram(filtered_data(), n_components = NULL)
+  })
+
   # --- Update Display Patch Slider -----------------------------------------
   observeEvent(cover(), {
     cov <- cover()
     n_elements <- if (is_union_cover(cov)) length(cov) else nrow(cov)
-    
+
     updateSliderInput(
       session,
       "display_patch",
@@ -155,12 +170,14 @@ server <- function(input, output, session) {
   })
 
   output$staggered_data <- renderPlot({
+    colors <- histogram_result()$colors
     plot_staggered_data(
       data(),
       cover(),
       get_lens(input$lens),
       input,
-      filtered_data()
+      filtered_data(),
+      colors = colors
     )
   })
 
@@ -169,19 +186,25 @@ server <- function(input, output, session) {
   })
 
   output$global_histogram <- renderPlot({
-    plot_global_histogram(filtered_data())
+    # Return only the plot part
+    global_histogram_result()$plot
   })
 
+  output$cover_histogram <- renderPlot({
+    # Return only the plot part
+    histogram_result()$plot
+  })
+
+
   output$mapper_cover_splits <- renderPlot({
-    plot_mapper_cover_splits(cover(), filtered_data(), bins = 30)
+    # Get xlim from histogram result and pass to cover splits
+    xlim <- histogram_result()$xlim
+    colors <- histogram_result()$colors
+    plot_mapper_cover_splits(cover(), filtered_data(), bins = 30, xlim = xlim, colors = colors)
   })
 
   output$patch_histogram <- renderPlot({
     plot_patch_histogram(data(), mapper(), filtered_data(), input$display_patch)
-  })
-
-  output$cluster_histograms <- renderPlot({
-    plot_cluster_histograms(data(), mapper(), filtered_data(), input$display_patch)
   })
 
   output$patch_view <- renderPlot({

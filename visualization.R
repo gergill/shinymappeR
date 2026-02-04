@@ -15,12 +15,12 @@ plot_mapper_graph <- function(mapper_obj) {
 }
 
 # --- Mapper Cover Splits Line Plot -------------------------
-plot_mapper_cover_splits <- function(cov, lens_values = NULL, bins = 30) {
+plot_mapper_cover_splits <- function(cov, lens_values = NULL, bins = 30, xlim = NULL, colors = NULL) {
   # Convert to union format if needed
   if (!is_union_cover(cov)) {
     cov <- convert_to_union_cover(cov)
   }
-  
+
   if (length(cov) == 0) {
     plot(1, 1,
       type = "n", xlab = "Lens Values", ylab = "Elements",
@@ -30,19 +30,29 @@ plot_mapper_cover_splits <- function(cov, lens_values = NULL, bins = 30) {
   }
 
   n_elements <- length(cov)
-  cov_colors <- viridis::viridis(n_elements, alpha = 0.7, option = "D")
+
+  # Use provided colors or fall back to viridis
+  if (!is.null(colors) && length(colors) == n_elements) {
+    cov_colors <- colors
+  } else {
+    cov_colors <- viridis::viridis(n_elements, alpha = 0.7, option = "D")
+  }
 
   # Calculate x-range
-  if (!is.null(lens_values)) {
+  if (!is.null(xlim)) {
+    x_range <- xlim
+    x_padding <- 0
+  } else if (!is.null(lens_values)) {
     lens_values <- na.omit(lens_values)
     h <- hist(lens_values, breaks = bins, plot = FALSE)
     x_range <- c(min(h$breaks), max(h$breaks))
+    x_padding <- diff(x_range) * 0.05
   } else {
     all_bounds <- do.call(rbind, cov)
     x_range <- range(all_bounds)
+    x_padding <- diff(x_range) * 0.05
   }
 
-  x_padding <- diff(x_range) * 0.05
   plot(x_range + c(-x_padding, x_padding), c(0, n_elements + 1),
     type = "n", xlab = "Lens Values", ylab = "Element Index",
     main = "Mapper Cover Elements", axes = TRUE
@@ -54,11 +64,11 @@ plot_mapper_cover_splits <- function(cov, lens_values = NULL, bins = 30) {
   for (i in seq_len(n_elements)) {
     element <- cov[[i]]
     n_intervals <- nrow(element)
-    
+
     for (j in seq_len(n_intervals)) {
       y_bottom <- i - rect_height / 2
       y_top <- i + rect_height / 2
-      
+
       # Different style for union elements
       border_lwd <- if (n_intervals > 1) 2 else 1
       border_lty <- if (n_intervals > 1) 1 else 1
@@ -98,12 +108,12 @@ plot_mapper_cover_splits <- function(cov, lens_values = NULL, bins = 30) {
 }
 
 # --- Staggered Data + Cover Visualization ------------------
-plot_staggered_data <- function(df, cov, lens_obj, input, filtered_vals) {
+plot_staggered_data <- function(df, cov, lens_obj, input, filtered_vals, colors = NULL) {
   # Convert to union format if needed
   if (!is_union_cover(cov)) {
     cov <- convert_to_union_cover(cov)
   }
-  
+
   plot(
     df,
     asp = 1, pch = 20, col = "grey",
@@ -113,7 +123,13 @@ plot_staggered_data <- function(df, cov, lens_obj, input, filtered_vals) {
 
   if (lens_obj$projection) {
     n_elements <- length(cov)
-    cov_colors <- viridis::viridis(n_elements, alpha = 0.35, option = "D")
+
+    # Use provided colors or fall back to viridis
+    if (!is.null(colors) && length(colors) == n_elements) {
+      cov_colors <- adjustcolor(colors, alpha.f = 0.35)
+    } else {
+      cov_colors <- viridis::viridis(n_elements, alpha = 0.35, option = "D")
+    }
 
     if (input$lens == "project to x") {
       for (i in seq_len(n_elements)) {
@@ -155,7 +171,7 @@ plot_staggered_data <- function(df, cov, lens_obj, input, filtered_vals) {
         for (j in seq_len(nrow(element))) {
           lty_style <- if (nrow(element) > 1) 1 else (if (i %% 2 == 0) 2 else 1)
           lwd_style <- if (nrow(element) > 1) 2 else 1
-          
+
           cut1 <- pinfo$point + element[j, 1] * pvec
           cut2 <- pinfo$point + element[j, 2] * pvec
           rect_coords <- rbind(
@@ -185,7 +201,7 @@ plot_staggered_data <- function(df, cov, lens_obj, input, filtered_vals) {
         for (j in seq_len(nrow(element))) {
           lty_style <- if (nrow(element) > 1) 1 else (if (i %% 2 == 0) 2 else 1)
           lwd_style <- if (nrow(element) > 1) 2 else 1
-          
+
           cut1 <- element[j, 1] * pvec
           cut2 <- element[j, 2] * pvec
           rect_coords <- rbind(

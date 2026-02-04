@@ -17,10 +17,9 @@ create_1D_mapper_object_union <- function(data,
                                           filtered_data,
                                           cover,
                                           clusterer = global_hierarchical_clusterer("single", dists)) {
-  
   # Create interval checker functions that work with both union and matrix covers
   cover_functions <- create_interval_checkers(cover)
-  
+
   # Validate that all intervals are properly ordered
   if (is_union_cover(cover)) {
     for (i in seq_along(cover)) {
@@ -34,7 +33,7 @@ create_1D_mapper_object_union <- function(data,
       stop("Left endpoints in the cover must be less than or equal to right endpoints.")
     }
   }
-  
+
   # Call the underlying mapper function with our cover functions
   return(create_mapper_object(data, dists, filtered_data, cover_functions, clusterer = clusterer))
 }
