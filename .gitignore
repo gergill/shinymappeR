@@ -61,8 +61,7 @@ _cache/
 # Environment / Automation -------------------------------------------
 
 # Direnv
-.direnv/
-.envrc
+.direnv
 
 # Just (task runner) logs
 .justfile.local
